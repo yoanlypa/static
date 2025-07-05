@@ -48,10 +48,20 @@ export default function PedidoForm() {
   };
 
   const onSubmit = async () => {
+    const primeraMaleta = maletas[0]?.datos || {};
     const payload = {
-      tipoServicio,
-      generales: datosGenerales,
-      maletas: maletas.map(m => m.datos || {}),
+      excursion: datosGenerales.excursion || primeraMaleta.excursion || '',
+      fecha_inicio: datosGenerales.fechaInicio || primeraMaleta.fechaInicio || '',
+      fecha_fin: datosGenerales.fechaFin || primeraMaleta.fechaFin || '',
+      lugar_entrega: datosGenerales.lugarEntrega || primeraMaleta.lugarEntrega || '',
+      lugar_recogida: datosGenerales.lugarRecogida || primeraMaleta.lugarRecogida || '',
+      hora_inicio: datosGenerales.horaInicio || primeraMaleta.horaInicio || '',
+      hora_fin: datosGenerales.horaFin || primeraMaleta.horaFin || '',
+      guia: datosGenerales.guia || primeraMaleta.guia || '',
+      pax: datosGenerales.pax || primeraMaleta.pax || '',
+      emisores: datosGenerales.emisores || primeraMaleta.emisores || '',
+      bono: primeraMaleta.bono || '',
+      notas: primeraMaleta.notas || '',
     };
     console.log('Datos enviados:', payload);
     try {
