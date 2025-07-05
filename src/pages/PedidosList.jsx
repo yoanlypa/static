@@ -8,12 +8,12 @@ export default function PedidosList() {
   const queryClient = useQueryClient();
   const { data: pedidos = [], isLoading, isError } = useQuery({
     queryKey: ['pedidos'],
-    queryFn: async () => (await api.get('/pedidos/')).data,
+    queryFn: async () => (await api.get('/api/pedidos/')).data,
   });
 
   const [modalOpen, setModalOpen] = useState(false);
   const addPedido = useMutation({
-    mutationFn: newPedido => api.post('/pedidos/', newPedido),
+    mutationFn: newPedido => api.post('/api/pedidos/', newPedido),
     onSuccess: () => {
       queryClient.invalidateQueries(['pedidos']);
       setModalOpen(false);
