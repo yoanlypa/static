@@ -1,14 +1,22 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
-import PedidoFormModal from '../components/PedidoFormModal';
+import PedidoFormModal from '../components/PedidoForm';
+
+function normalizePedidos(raw) {
+  // A) DRF paginado → { results: [...] }
+  if (raw && Array.isArray(raw.results)) return raw.results;
+  // B) Array con posibles nulls/undefined
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  return [];
+}
 
 export default function PedidosList() {
   const [modalOpen, setModalOpen] = useState(false);
   const buttonRef = useRef(null);
 
   const {
-    data: pedidos = [],
+    data,
     isLoading,
     isError,
     refetch,
@@ -17,32 +25,22 @@ export default function PedidosList() {
     queryFn: async () => (await api.get('/mis-pedidos/')).data,
   });
 
-  const safePedidos = Array.isArray(pedidos) ? pedidos.filter(Boolean) : [];
+  const pedidos = useMemo(() => normalizePedidos(data), [data]);
 
   const handleCloseModal = (changed = false) => {
     setModalOpen(false);
-    if (changed) {
-      refetch();
-    }
+    if (changed) refetch();
     buttonRef.current?.focus();
   };
 
-  if (isLoading) {
-    return <p className="text-center mt-8">Cargando pedidos...</p>;
-  }
-  if (isError) {
-    return (
-      <p className="text-center mt-8 text-red-600" aria-live="polite">
-        Error al cargar pedidos
-      </p>
-    );
-  }
+  if (isLoading) return <p className="text-center mt-8">Cargando pedidos...</p>;
+  if (isError) return <p className="text-center mt-8 text-red-600">Error al cargar pedidos</p>;
 
   return (
     <div className="p-6 relative">
       <h1 className="text-3xl font-bold mb-4 text-gray-800">Mis pedidos</h1>
 
-      {safePedidos.length === 0 ? (
+      {pedidos.length === 0 ? (
         <p className="text-gray-600">Aún no has creado ningún pedido.</p>
       ) : (
         <table className="min-w-full bg-white rounded-xl shadow overflow-hidden">
@@ -55,16 +53,14 @@ export default function PedidosList() {
             </tr>
           </thead>
           <tbody>
-            {safePedidos.map((p) => (
+            {pedidos.map((p) => (
               <tr key={p.id} className="border-t last:border-b-0 hover:bg-blue-50 transition">
-                <td className="px-4 py-2 text-sm">{p?.id ?? '—'}</td>
-                <td className="px-4 py-2 text-sm">{p?.excursion ?? '—'}</td>
+                <td className="px-4 py-2 text-sm">{p.id}</td>
+                <td className="px-4 py-2 text-sm">{p.excursion ?? '—'}</td>
                 <td className="px-4 py-2 text-sm">
-                  {p?.fecha_inicio ?? '—'} - {p?.fecha_fin ?? '—'}
+                  {p.fecha_inicio} - {p.fecha_fin || '—'}
                 </td>
-                <td className="px-4 py-2 text-sm capitalize">
-                  {p?.estado?.replace('_', ' ') ?? '—'}
-                </td>
+                <td className="px-4 py-2 text-sm capitalize">{(p.estado ?? '').replace('_', ' ')}</td>
               </tr>
             ))}
           </tbody>
@@ -84,4 +80,3 @@ export default function PedidosList() {
     </div>
   );
 }
-
