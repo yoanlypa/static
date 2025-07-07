@@ -38,7 +38,7 @@ export default function Maleta({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
         <input type="hidden" name="tipoServicio" value={tipoServicio} />
         {[
-          { label: "Grupo", name: "grupo", required: false },
+  
           { label: "Excursión", name: "excursion", required: true },
           { label: "Lugar entrega", name: "lugarEntrega", required: true },
           { label: "Lugar recogida", name: "lugarRecogida", required: false },
