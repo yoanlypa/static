@@ -1,61 +1,90 @@
-import { useEffect, useState } from 'react';
+import { useState, useRef } from 'react';
+import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
-import Modal from '../components/Modal.jsx';
-import PedidoForm from '../components/PedidoForm.jsx';
+import PedidoFormModal from '../components/PedidoForm';
 
+export default function PedidosList() {
+  const [modalOpen, setModalOpen] = useState(false);
+  const buttonRef = useRef(null);
 
-    export default function MisPedidos() {
-        const [pedidos, setPedidos] = useState([]);
-        const [loading, setLoading] = useState(true);
-        const [modalOpen, setModalOpen] = useState(false);
+  const {
+    data: pedidos = [],
+    isLoading,
+    isError,
+    refetch,
+  } = useQuery({
+    queryKey: ['mis-pedidos'],
+    queryFn: async () => (await api.get('/mis-pedidos/')).data,
+  });
 
-        useEffect(() => {
-            const fetchPedidos = async () => {
-            try {
-                const res = await api.get('/mis-pedidos/');
-                setPedidos(res.data);
-            } catch (err) {
-                console.error('Error al obtener pedidos:', err);
-            } finally {
-                setLoading(false);
-            }
-            };
+  const handleCloseModal = (hasChanged = false) => {
+    setModalOpen(false);
+    if (hasChanged) refetch();
+    buttonRef.current?.focus();
+  };
 
-            fetchPedidos();
-        }, []);
+  if (isLoading)
+    return <p className="text-center mt-8">Cargando pedidos...</p>;
 
-        return (
-            <div className="p-6">
-                <h1 className="text-3xl font-bold mb-4">Mis pedidos</h1>
-                <button
+  if (isError)
+    return (
+      <p className="text-center mt-8 text-red-600">Error al cargar pedidos</p>
+    );
+
+  return (
+    <div className="p-6 relative">
+      <h1 className="text-3xl font-bold mb-4 text-gray-800">Mis pedidos</h1>
+
+      {pedidos.length === 0 ? (
+        <p className="text-gray-600">Aún no has creado ningún pedido.</p>
+      ) : (
+        <table className="min-w-full bg-white rounded-xl shadow overflow-hidden">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                ID
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                Excursión
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                Fechas
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                Estado
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {pedidos.map((p) => (
+              <tr
+                key={p.id}
+                className="border-t last:border-b-0 hover:bg-blue-50 transition"
+              >
+                <td className="px-4 py-2 text-sm">{p.id}</td>
+                <td className="px-4 py-2 text-sm">{p.excursion}</td>
+                <td className="px-4 py-2 text-sm">
+                  {p.fecha_inicio} - {p.fecha_fin || '—'}
+                </td>
+                <td className="px-4 py-2 text-sm capitalize">
+                  {p.estado.replace('_', ' ')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      )}
+
+      <button
+        ref={buttonRef}
         onClick={() => setModalOpen(true)}
-        className="fixed bottom-6 right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition"
-        aria-label="Nuevo Pedido"
+        className="md:fixed md:bottom-6 md:right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition"
+        aria-label="Nuevo pedido"
       >
         +
       </button>
-            <Modal isOpen={modalOpen} onClose={() => setModalOpen(false)}>
-            <PedidoForm onClose={() => setModalOpen(false)} />
-            </Modal>
-            {loading ? (
-                <p>Cargando...</p>
-            ) : pedidos.length === 0 ? (
-                <p>No tienes pedidos aún.</p>
-            ) : (
-                <ul className="space-y-4">
-                {pedidos.map((pedido) => (
-                    <li
-                    key={pedido.id}
-                    className="border p-4 rounded shadow bg-white hover:shadow-md transition"
-                    >
-                    <p><strong>Empresa:</strong> {pedido.empresa_nombre}</p>
-                    <p><strong>Fecha:</strong> {new Date(pedido.created_at).toLocaleDateString()}</p>
-                    <p><strong>Estado:</strong> {pedido.estado}</p>
-                    {/* Agrega más campos según el modelo */}
-                    </li>
-                ))}
-                </ul>
-            )}
-            </div>
-        );
-        }
+
+      <PedidoFormModal isOpen={modalOpen} onClose={handleCloseModal} />
+    </div>
+  );
+}
