@@ -1,9 +1,9 @@
 // ✅ PedidoForm.jsx (convertido en modal)
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import api from '@/services/api';
-import ToggleIOS from '@/components/ToggleIOS';
-import MaletaForm from '@/components/MaletaForm';
+import api from '../services/api';
+import ToggleIOS from './ToggleIOS';
+import MaletaForm from './MaletaForm';
 
 export default function PedidoFormModal({ isOpen, onClose }) {
   const { register, handleSubmit, getValues } = useForm();
