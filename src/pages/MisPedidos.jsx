@@ -1,14 +1,22 @@
-import { useState, useRef } from 'react';
+import { useState, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
-import PedidoFormModal from '../components/PedidoFormModal';
+import PedidoFormModal from '../components/PedidoForm';
+
+function normalizePedidos(raw) {
+  // A) DRF paginado → { results: [...] }
+  if (raw && Array.isArray(raw.results)) return raw.results;
+  // B) Array con posibles nulls/undefined
+  if (Array.isArray(raw)) return raw.filter(Boolean);
+  return [];
+}
 
 export default function PedidosList() {
   const [modalOpen, setModalOpen] = useState(false);
   const buttonRef = useRef(null);
 
   const {
-    data: pedidos = [],
+    data,
     isLoading,
     isError,
     refetch,
@@ -17,19 +25,16 @@ export default function PedidosList() {
     queryFn: async () => (await api.get('/mis-pedidos/')).data,
   });
 
-  const handleCloseModal = (shouldRefetch = false) => {
+  const pedidos = useMemo(() => normalizePedidos(data), [data]);
+
+  const handleCloseModal = (changed = false) => {
     setModalOpen(false);
-    if (shouldRefetch) refetch();
+    if (changed) refetch();
     buttonRef.current?.focus();
   };
 
   if (isLoading) return <p className="text-center mt-8">Cargando pedidos...</p>;
-  if (isError)
-    return (
-      <p className="text-center mt-8 text-red-600" aria-live="polite">
-        Error al cargar pedidos
-      </p>
-    );
+  if (isError) return <p className="text-center mt-8 text-red-600">Error al cargar pedidos</p>;
 
   return (
     <div className="p-6 relative">
@@ -51,11 +56,11 @@ export default function PedidosList() {
             {pedidos.map((p) => (
               <tr key={p.id} className="border-t last:border-b-0 hover:bg-blue-50 transition">
                 <td className="px-4 py-2 text-sm">{p.id}</td>
-                <td className="px-4 py-2 text-sm">{p.excursion}</td>
+                <td className="px-4 py-2 text-sm">{p.excursion ?? '—'}</td>
                 <td className="px-4 py-2 text-sm">
                   {p.fecha_inicio} - {p.fecha_fin || '—'}
                 </td>
-                <td className="px-4 py-2 text-sm capitalize">{p.estado.replace('_', ' ')}</td>
+                <td className="px-4 py-2 text-sm capitalize">{(p.estado ?? '').replace('_', ' ')}</td>
               </tr>
             ))}
           </tbody>
@@ -71,7 +76,6 @@ export default function PedidosList() {
         +
       </button>
 
-      {/* NOTA: handleCloseModal enviará true si el formulario realmente guardó algo */}
       <PedidoFormModal isOpen={modalOpen} onClose={handleCloseModal} />
     </div>
   );
