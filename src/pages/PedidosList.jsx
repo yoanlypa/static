@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
-import PedidoFormModal from './components/PedidoForm';
+import PedidoFormModal from '../components/PedidoForm';
 
 export default function PedidosList() {
   const [modalOpen, setModalOpen] = useState(false);
