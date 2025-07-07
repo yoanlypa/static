@@ -1,15 +1,32 @@
-// ✅ PedidoForm.jsx (convertido en modal)
+
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
 import Toggle from './Toggle';
 import Maleta from './Maleta';
 
+const defaultDatosGenerales = {
+  grupo: '',
+  excursion: '',
+  lugarEntrega: '',
+  lugarRecogida: '',
+  fechaInicio: '',
+  fechaFin: '',
+  horaInicio: '',
+  horaFin: '',
+  guia: '',
+  pax: '',
+  emisores: '',
+};
+
 export default function PedidoFormModal({ isOpen, onClose }) {
-  const { register, handleSubmit, getValues } = useForm();
+  const { register, handleSubmit, getValues } = useForm({
+    defaultValues: { datosGenerales: defaultDatosGenerales },
+  });
   const [tipoServicio, setTipoServicio] = useState('medioDia');
   const [maletas, setMaletas] = useState([{ id: 1 }]);
   const [aplicarGeneral, setAplicarGeneral] = useState({
+    grupo: false,
     excursion: false,
     lugarEntrega: false,
     lugarRecogida: false,
@@ -32,8 +49,7 @@ export default function PedidoFormModal({ isOpen, onClose }) {
   };
 
   const removeMaleta = (id) => {
-    const nuevas = maletas.filter((m) => m.id !== id);
-    setMaletas(nuevas);
+    setMaletas((prev) => prev.filter((m) => m.id !== id));
   };
 
   const onSubmit = async (data) => {
@@ -47,7 +63,7 @@ export default function PedidoFormModal({ isOpen, onClose }) {
       };
       await api.post('/api/pedidos/', payload);
       alert('Pedido guardado exitosamente');
-      onClose();
+      onClose(true); // ← indica que hubo cambios
     } catch (err) {
       console.error('Error al guardar:', err);
       alert('Hubo un error al guardar el pedido');
@@ -61,9 +77,12 @@ export default function PedidoFormModal({ isOpen, onClose }) {
       <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-6 overflow-y-auto max-h-[90vh]">
         <div className="flex justify-between items-center mb-4">
           <h2 className="text-2xl font-bold text-blue-700">Nuevo Pedido</h2>
-          <button onClick={onClose} className="text-red-500 font-bold text-xl">&times;</button>
+          <button onClick={() => onClose(false)} className="text-red-500 font-bold text-xl">
+            &times;
+          </button>
         </div>
         <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          {/* Datos generales */}
           <div className="bg-gray-50 p-4 rounded-lg border">
             <h3 className="text-lg font-semibold text-primary mb-2">Datos generales</h3>
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -88,10 +107,15 @@ export default function PedidoFormModal({ isOpen, onClose }) {
             </div>
           </div>
 
+          {/* Maletas */}
           <div className="bg-gray-50 p-4 rounded-lg border">
             <div className="flex justify-between mb-2">
               <h3 className="text-lg font-semibold text-primary">Maletas</h3>
-              <button type="button" onClick={addMaleta} className="text-blue-600 hover:underline text-sm">
+              <button
+                type="button"
+                onClick={addMaleta}
+                className="text-blue-600 hover:underline text-sm"
+              >
                 + Añadir maleta
               </button>
             </div>
@@ -101,11 +125,11 @@ export default function PedidoFormModal({ isOpen, onClose }) {
                 id={maleta.id}
                 index={index + 1}
                 tipoServicio={tipoServicio}
-                datosGenerales={getValues('datosGenerales') || {}}
+                datosGenerales={getValues('datosGenerales') || defaultDatosGenerales}
                 aplicarGeneral={aplicarGeneral}
                 onRemove={() => removeMaleta(maleta.id)}
                 onChange={(data) => {
-                  maleta.datos = data;
+                  maleta.datos = data; // opcional: manejar en un estado aparte
                 }}
               />
             ))}
