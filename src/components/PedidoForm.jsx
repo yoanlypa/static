@@ -1,156 +1,124 @@
-// src/components/PedidoForm.jsx
-import React, { useEffect, useState } from 'react';
+// ✅ PedidoForm.jsx (convertido en modal)
+import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
-import api from '../services/api.js';
-import MaletaForm from './MaletaForm';
-import Toggle from './Toggle';
+import api from '@/services/api';
+import ToggleIOS from '@/components/ToggleIOS';
+import MaletaForm from '@/components/MaletaForm';
 
-export default function PedidoForm() {
-  const { handleSubmit } = useForm();
+export default function PedidoFormModal({ isOpen, onClose }) {
+  const { register, handleSubmit, getValues } = useForm();
   const [tipoServicio, setTipoServicio] = useState('medioDia');
-  const [maletas, setMaletas] = useState([]);
-  const [datosGenerales, setDatosGenerales] = useState({
-    grupo: '',
-    excursion: '',
-    lugarEntrega: '',
-    lugarRecogida: '',
-    fechaInicio: '',
-    fechaFin: '',
-    horaInicio: '',
-    horaFin: '',
-    guia: '',
-    pax: '',
-    emisores: '',
+  const [maletas, setMaletas] = useState([{ id: 1 }]);
+  const [aplicarGeneral, setAplicarGeneral] = useState({
+    grupo: false,
+    excursion: false,
+    lugarEntrega: false,
+    lugarRecogida: false,
+    fechaInicio: false,
+    fechaFin: false,
+    horaInicio: false,
+    horaFin: false,
+    guia: false,
+    pax: false,
+    emisores: false,
   });
-  const [aplicarGeneral, setAplicarGeneral] = useState(
-    Object.fromEntries(Object.keys(datosGenerales).map(key => [key, false]))
-  );
 
-  useEffect(() => {
-    setMaletas([{ id: 1 }]);
-  }, []);
+  const toggleAplicarGeneral = (field) => {
+    setAplicarGeneral((prev) => ({ ...prev, [field]: !prev[field] }));
+  };
 
   const addMaleta = () => {
-    const nuevaId = maletas.length ? Math.max(...maletas.map(m => m.id)) + 1 : 1;
+    const nuevaId = maletas.length + 1;
     setMaletas([...maletas, { id: nuevaId }]);
   };
 
   const removeMaleta = (id) => {
-    setMaletas(prev => prev.filter(m => m.id !== id));
+    const nuevas = maletas.filter((m) => m.id !== id);
+    setMaletas(nuevas);
   };
 
-  const updateDatosGenerales = (field, value) => {
-    setDatosGenerales(prev => ({ ...prev, [field]: value }));
-  };
-
-  const toggleAplicarGeneral = (field) => {
-    setAplicarGeneral(prev => ({ ...prev, [field]: !prev[field] }));
-  };
-
-  const onSubmit = async () => {
-    const primeraMaleta = maletas[0]?.datos || {};
-    const payload = {
-      excursion: datosGenerales.excursion || primeraMaleta.excursion || '',
-      fecha_inicio: datosGenerales.fechaInicio || primeraMaleta.fechaInicio || '',
-      fecha_fin: datosGenerales.fechaFin || primeraMaleta.fechaFin || '',
-      lugar_entrega: datosGenerales.lugarEntrega || primeraMaleta.lugarEntrega || '',
-      lugar_recogida: datosGenerales.lugarRecogida || primeraMaleta.lugarRecogida || '',
-      hora_inicio: datosGenerales.horaInicio || primeraMaleta.horaInicio || '',
-      hora_fin: datosGenerales.horaFin || primeraMaleta.horaFin || '',
-      guia: datosGenerales.guia || primeraMaleta.guia || '',
-      pax: datosGenerales.pax || primeraMaleta.pax || '',
-      emisores: datosGenerales.emisores || primeraMaleta.emisores || '',
-      bono: primeraMaleta.bono || '',
-      notas: primeraMaleta.notas || '',
-    };
-    console.log('Datos enviados:', payload);
+  const onSubmit = async (data) => {
     try {
+      const payload = {
+        ...data,
+        tipoServicio,
+        maletas: maletas.map((m, i) => ({
+          ...getValues(`maletas[${i}]`),
+        })),
+      };
       await api.post('/api/pedidos/', payload);
-      alert('Pedido guardado con éxito');
-    } catch (error) {
-      console.error('Error al guardar:', error);
-      alert('Error al guardar el pedido');
+      alert('Pedido guardado exitosamente');
+      onClose();
+    } catch (err) {
+      console.error('Error al guardar:', err);
+      alert('Hubo un error al guardar el pedido');
     }
   };
 
+  if (!isOpen) return null;
+
   return (
-    <form onSubmit={handleSubmit(onSubmit)} className="space-y-6 p-4 max-w-5xl mx-auto">
-      <div className="bg-gray-100 p-4 rounded shadow">
-        <h2 className="text-xl font-bold mb-4 text-blue-700">Datos Generales</h2>
-        <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-          {Object.entries(datosGenerales).map(([key, value]) => (
-            <div key={key} className="flex flex-col">
-              <label className="capitalize text-sm font-medium">{key.replace(/([A-Z])/g, ' $1')}</label>
-              <div className="flex items-center gap-2">
-                <input
-                  type={key.includes('fecha') ? 'date' : key.includes('hora') ? 'time' : 'text'}
-                  value={value}
-                  onChange={(e) => updateDatosGenerales(key, e.target.value)}
-                  className="flex-1 px-3 py-2 border rounded"
-                />
-                <Toggle
-                  checked={aplicarGeneral[key]}
-                  onChange={() => toggleAplicarGeneral(key)}
-                />
-              </div>
+    <div className="fixed inset-0 z-50 flex items-center justify-center bg-black bg-opacity-50">
+      <div className="bg-white rounded-lg shadow-lg max-w-4xl w-full p-6 overflow-y-auto max-h-[90vh]">
+        <div className="flex justify-between items-center mb-4">
+          <h2 className="text-2xl font-bold text-blue-700">Nuevo Pedido</h2>
+          <button onClick={onClose} className="text-red-500 font-bold text-xl">&times;</button>
+        </div>
+        <form onSubmit={handleSubmit(onSubmit)} className="space-y-6">
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <h3 className="text-lg font-semibold text-primary mb-2">Datos generales</h3>
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
+              {Object.keys(aplicarGeneral).map((key) => (
+                <div key={key} className="flex flex-col">
+                  <label className="text-sm text-gray-700 mb-1 capitalize">
+                    {key.replace(/([A-Z])/g, ' $1')}
+                  </label>
+                  <div className="flex items-center gap-2">
+                    <input
+                      type={key.includes('fecha') ? 'date' : key.includes('hora') ? 'time' : 'text'}
+                      {...register(`datosGenerales.${key}`)}
+                      className="flex-1 px-3 py-2 border rounded input-general"
+                    />
+                    <ToggleIOS
+                      checked={aplicarGeneral[key]}
+                      onChange={() => toggleAplicarGeneral(key)}
+                    />
+                  </div>
+                </div>
+              ))}
             </div>
-          ))}
-        </div>
-      </div>
+          </div>
 
-      <div className="bg-white p-4 rounded shadow">
-        <h3 className="text-lg font-semibold mb-4">Tipo de servicio</h3>
-        <div className="flex gap-2 mb-4">
-          {['medioDia', 'diaCompleto', 'circuito'].map(tipo => (
-            <button
-              key={tipo}
-              type="button"
-              className={`px-4 py-2 rounded border ${
-                tipoServicio === tipo ? 'bg-blue-600 text-white' : 'bg-gray-200'
-              }`}
-              onClick={() => setTipoServicio(tipo)}
-            >
-              {tipo === 'medioDia' ? 'Medio Día' : tipo === 'diaCompleto' ? 'Día Completo' : 'Circuito'}
+          <div className="bg-gray-50 p-4 rounded-lg border">
+            <div className="flex justify-between mb-2">
+              <h3 className="text-lg font-semibold text-primary">Maletas</h3>
+              <button type="button" onClick={addMaleta} className="text-blue-600 hover:underline text-sm">
+                + Añadir maleta
+              </button>
+            </div>
+            {maletas.map((maleta, index) => (
+              <MaletaForm
+                key={maleta.id}
+                id={maleta.id}
+                index={index + 1}
+                tipoServicio={tipoServicio}
+                datosGenerales={getValues('datosGenerales') || {}}
+                aplicarGeneral={aplicarGeneral}
+                onRemove={() => removeMaleta(maleta.id)}
+                onChange={(data) => {
+                  maleta.datos = data;
+                }}
+              />
+            ))}
+          </div>
+
+          <div className="text-right">
+            <button type="submit" className="bg-blue-600 text-white px-4 py-2 rounded hover:bg-blue-700">
+              Guardar pedido
             </button>
-          ))}
-        </div>
-
-        <div className="space-y-4">
-          {maletas.map((maleta, i) => (
-            <MaletaForm
-              key={maleta.id}
-              id={maleta.id}
-              index={i + 1}
-              tipoServicio={tipoServicio}
-              datosGenerales={datosGenerales}
-              aplicarGeneral={aplicarGeneral}
-              onRemove={() => removeMaleta(maleta.id)}
-              onChange={(datos) =>
-                setMaletas(prev =>
-                  prev.map(m => (m.id === maleta.id ? { ...m, datos } : m))
-                )
-              }
-            />
-          ))}
-        </div>
-
-        <button
-          type="button"
-          onClick={addMaleta}
-          className="mt-4 bg-orange-500 text-white px-4 py-2 rounded"
-        >
-          ➕ Añadir maleta
-        </button>
+          </div>
+        </form>
       </div>
-
-      <div className="text-center">
-        <button
-          type="submit"
-          className="bg-blue-700 text-white px-6 py-2 rounded hover:bg-blue-800"
-        >
-          Guardar pedido
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }
