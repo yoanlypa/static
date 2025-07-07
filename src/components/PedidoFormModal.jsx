@@ -2,15 +2,14 @@
 import React, { useState } from 'react';
 import { useForm } from 'react-hook-form';
 import api from '../services/api';
-import ToggleIOS from './Toggle';
-import MaletaForm from './Maleta';
+import Toggle from './Toggle';
+import Maleta from './Maleta';
 
 export default function PedidoFormModal({ isOpen, onClose }) {
   const { register, handleSubmit, getValues } = useForm();
   const [tipoServicio, setTipoServicio] = useState('medioDia');
   const [maletas, setMaletas] = useState([{ id: 1 }]);
   const [aplicarGeneral, setAplicarGeneral] = useState({
-    grupo: false,
     excursion: false,
     lugarEntrega: false,
     lugarRecogida: false,
@@ -79,7 +78,7 @@ export default function PedidoFormModal({ isOpen, onClose }) {
                       {...register(`datosGenerales.${key}`)}
                       className="flex-1 px-3 py-2 border rounded input-general"
                     />
-                    <ToggleIOS
+                    <Toggle
                       checked={aplicarGeneral[key]}
                       onChange={() => toggleAplicarGeneral(key)}
                     />
@@ -97,7 +96,7 @@ export default function PedidoFormModal({ isOpen, onClose }) {
               </button>
             </div>
             {maletas.map((maleta, index) => (
-              <MaletaForm
+              <Maleta
                 key={maleta.id}
                 id={maleta.id}
                 index={index + 1}
