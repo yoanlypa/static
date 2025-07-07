@@ -1,7 +1,7 @@
 import { useState, useRef, useMemo } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
-import PedidoFormModal from '../components/PedidoForm';
+import PedidoFormModal from '../components/PedidoFormModal';
 
 function normalizePedidos(raw) {
   // A) DRF paginado → { results: [...] }
