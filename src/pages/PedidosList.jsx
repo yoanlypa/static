@@ -1,7 +1,7 @@
 import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
-import PedidoFormModal from '../components/PedidoFormModal';
+import PedidoFormModal from '../components/PedidoForm';
 
 export default function PedidosList() {
   const [modalOpen, setModalOpen] = useState(false);
@@ -17,57 +17,53 @@ export default function PedidosList() {
     queryFn: async () => (await api.get('/mis-pedidos/')).data,
   });
 
-  const handleCloseModal = (hasChanged = false) => {
+  const safePedidos = Array.isArray(pedidos) ? pedidos.filter(Boolean) : [];
+
+  const handleCloseModal = (changed = false) => {
     setModalOpen(false);
-    if (hasChanged) refetch();
+    if (changed) {
+      refetch();
+    }
     buttonRef.current?.focus();
   };
 
-  if (isLoading)
+  if (isLoading) {
     return <p className="text-center mt-8">Cargando pedidos...</p>;
-
-  if (isError)
+  }
+  if (isError) {
     return (
-      <p className="text-center mt-8 text-red-600">Error al cargar pedidos</p>
+      <p className="text-center mt-8 text-red-600" aria-live="polite">
+        Error al cargar pedidos
+      </p>
     );
+  }
 
   return (
     <div className="p-6 relative">
       <h1 className="text-3xl font-bold mb-4 text-gray-800">Mis pedidos</h1>
 
-      {pedidos.length === 0 ? (
+      {safePedidos.length === 0 ? (
         <p className="text-gray-600">Aún no has creado ningún pedido.</p>
       ) : (
         <table className="min-w-full bg-white rounded-xl shadow overflow-hidden">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                ID
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                Excursión
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                Fechas
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                Estado
-              </th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">ID</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Excursión</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Fechas</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Estado</th>
             </tr>
           </thead>
           <tbody>
-            {pedidos.map((p) => (
-              <tr
-                key={p.id}
-                className="border-t last:border-b-0 hover:bg-blue-50 transition"
-              >
-                <td className="px-4 py-2 text-sm">{p.id}</td>
-                <td className="px-4 py-2 text-sm">{p.excursion}</td>
+            {safePedidos.map((p) => (
+              <tr key={p.id} className="border-t last:border-b-0 hover:bg-blue-50 transition">
+                <td className="px-4 py-2 text-sm">{p?.id ?? '—'}</td>
+                <td className="px-4 py-2 text-sm">{p?.excursion ?? '—'}</td>
                 <td className="px-4 py-2 text-sm">
-                  {p.fecha_inicio} - {p.fecha_fin || '—'}
+                  {p?.fecha_inicio ?? '—'} - {p?.fecha_fin ?? '—'}
                 </td>
                 <td className="px-4 py-2 text-sm capitalize">
-                  {p.estado.replace('_', ' ')}
+                  {p?.estado?.replace('_', ' ') ?? '—'}
                 </td>
               </tr>
             ))}
@@ -88,3 +84,4 @@ export default function PedidosList() {
     </div>
   );
 }
+
