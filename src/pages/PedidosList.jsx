@@ -2,33 +2,34 @@ import { useState, useRef } from 'react';
 import { useQuery } from '@tanstack/react-query';
 import api from '../services/api';
 import PedidoFormModal from './components/PedidoForm';
-import dayjs from 'dayjs';
-import 'dayjs/locale/es';
-
-dayjs.locale('es');
 
 export default function PedidosList() {
-  const btnRef = useRef<HTMLButtonElement>(null);
   const [modalOpen, setModalOpen] = useState(false);
+  const buttonRef = useRef(null);
 
   const {
     data: pedidos = [],
     isLoading,
     isError,
     refetch,
-  } = useQuery<Pedido[]>({
+  } = useQuery({
     queryKey: ['mis-pedidos'],
-    queryFn: () => api.get('/mis-pedidos/').then(r => r.data),
+    queryFn: async () => (await api.get('/mis-pedidos/')).data,
   });
 
-  const handleClose = (changed = false) => {
+  const handleCloseModal = (hasChanged = false) => {
     setModalOpen(false);
-    if (changed) refetch();
-    btnRef.current?.focus();          // accesibilidad
+    if (hasChanged) refetch();
+    buttonRef.current?.focus();
   };
 
-  if (isLoading) return <PedidosSkeleton rows={3} />;
-  if (isError) return <p className="text-center mt-8 text-red-600" aria-live="polite">Error al cargar pedidos</p>;
+  if (isLoading)
+    return <p className="text-center mt-8">Cargando pedidos...</p>;
+
+  if (isError)
+    return (
+      <p className="text-center mt-8 text-red-600">Error al cargar pedidos</p>
+    );
 
   return (
     <div className="p-6 relative">
@@ -37,11 +38,45 @@ export default function PedidosList() {
       {pedidos.length === 0 ? (
         <p className="text-gray-600">Aún no has creado ningún pedido.</p>
       ) : (
-        <PedidosTable pedidos={pedidos} />
+        <table className="min-w-full bg-white rounded-xl shadow overflow-hidden">
+          <thead className="bg-gray-100">
+            <tr>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                ID
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                Excursión
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                Fechas
+              </th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
+                Estado
+              </th>
+            </tr>
+          </thead>
+          <tbody>
+            {pedidos.map((p) => (
+              <tr
+                key={p.id}
+                className="border-t last:border-b-0 hover:bg-blue-50 transition"
+              >
+                <td className="px-4 py-2 text-sm">{p.id}</td>
+                <td className="px-4 py-2 text-sm">{p.excursion}</td>
+                <td className="px-4 py-2 text-sm">
+                  {p.fecha_inicio} - {p.fecha_fin || '—'}
+                </td>
+                <td className="px-4 py-2 text-sm capitalize">
+                  {p.estado.replace('_', ' ')}
+                </td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
       )}
 
       <button
-        ref={btnRef}
+        ref={buttonRef}
         onClick={() => setModalOpen(true)}
         className="md:fixed md:bottom-6 md:right-6 bg-indigo-600 text-white p-4 rounded-full shadow-lg hover:bg-indigo-700 transition"
         aria-label="Nuevo pedido"
@@ -49,7 +84,7 @@ export default function PedidosList() {
         +
       </button>
 
-      <PedidoFormModal isOpen={modalOpen} onClose={handleClose} />
+      <PedidoFormModal isOpen={modalOpen} onClose={handleCloseModal} />
     </div>
   );
 }
