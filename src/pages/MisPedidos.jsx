@@ -17,18 +17,18 @@ export default function PedidosList() {
     queryFn: async () => (await api.get('/mis-pedidos/')).data,
   });
 
-  const handleCloseModal = (hasChanged = false) => {
+  const handleCloseModal = (shouldRefetch = false) => {
     setModalOpen(false);
-    if (hasChanged) refetch();
+    if (shouldRefetch) refetch();
     buttonRef.current?.focus();
   };
 
-  if (isLoading)
-    return <p className="text-center mt-8">Cargando pedidos...</p>;
-
+  if (isLoading) return <p className="text-center mt-8">Cargando pedidos...</p>;
   if (isError)
     return (
-      <p className="text-center mt-8 text-red-600">Error al cargar pedidos</p>
+      <p className="text-center mt-8 text-red-600" aria-live="polite">
+        Error al cargar pedidos
+      </p>
     );
 
   return (
@@ -41,34 +41,21 @@ export default function PedidosList() {
         <table className="min-w-full bg-white rounded-xl shadow overflow-hidden">
           <thead className="bg-gray-100">
             <tr>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                ID
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                Excursión
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                Fechas
-              </th>
-              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">
-                Estado
-              </th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">ID</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Excursión</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Fechas</th>
+              <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Estado</th>
             </tr>
           </thead>
           <tbody>
             {pedidos.map((p) => (
-              <tr
-                key={p.id}
-                className="border-t last:border-b-0 hover:bg-blue-50 transition"
-              >
+              <tr key={p.id} className="border-t last:border-b-0 hover:bg-blue-50 transition">
                 <td className="px-4 py-2 text-sm">{p.id}</td>
                 <td className="px-4 py-2 text-sm">{p.excursion}</td>
                 <td className="px-4 py-2 text-sm">
                   {p.fecha_inicio} - {p.fecha_fin || '—'}
                 </td>
-                <td className="px-4 py-2 text-sm capitalize">
-                  {p.estado.replace('_', ' ')}
-                </td>
+                <td className="px-4 py-2 text-sm capitalize">{p.estado.replace('_', ' ')}</td>
               </tr>
             ))}
           </tbody>
@@ -84,6 +71,7 @@ export default function PedidosList() {
         +
       </button>
 
+      {/* NOTA: handleCloseModal enviará true si el formulario realmente guardó algo */}
       <PedidoFormModal isOpen={modalOpen} onClose={handleCloseModal} />
     </div>
   );
