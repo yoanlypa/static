@@ -18,6 +18,9 @@ export default function Header() {
               <Link to="/mis-pedidos" className="hover:text-blue-500 transition">
                 Mis pedidos
               </Link>
+              <Link to="/cruceros" className="hover:text-blue-500 transition">
+                Cruceros
+              </Link>
               <button
                 onClick={logout}
                 className="text-red-500 hover:text-red-700 transition"
