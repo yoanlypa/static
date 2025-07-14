@@ -1,29 +1,40 @@
 import { useEffect, useState } from "react";
 
-function Cruceros() {
-  const [rows, setRows] = useState([]);
-  const [loading, setLoading] = useState(true);
+const API_BASE = import.meta.env.VITE_API_URL || ""; // usa .env si lo defines
+
+export default function Cruceros() {
+  const [rows, setRows]     = useState([]);
+  const [error, setError]   = useState(null);
+  const [loading, setLoad]  = useState(true);
 
   useEffect(() => {
-    fetch("/api/pedidos/cruceros/bulk/", {
+    const jwt = localStorage.getItem("access");   // tu token
+
+    fetch(`${API_BASE}/api/pedidos/cruceros/bulk/`, {
       headers: {
-        Authorization: "Bearer " + localStorage.getItem("access"), // tu JWT guardado
+        "Authorization": jwt ? `Bearer ${jwt}` : "",
+        "Accept": "application/json",
       },
     })
-      .then((r) => r.json())
-      .then((data) => {
-        setRows(data);
-        setLoading(false);
-      });
+      .then(async (r) => {
+        if (!r.ok) {
+          const text = await r.text();
+          throw new Error(`${r.status} ${r.statusText}\n${text.slice(0,200)}`);
+        }
+        return r.json();
+      })
+      .then(setRows)
+      .catch((err) => setError(err.message))
+      .finally(() => setLoad(false));
   }, []);
 
-  if (loading)
-    return <p className="p-4 text-slate-500">Cargando cruceros…</p>;
+  if (loading) return <p className="p-4 text-slate-500">Cargando cruceros…</p>;
+  if (error)   return <pre className="p-4 text-red-600">{error}</pre>;
 
   return (
     <div className="p-4">
       <h1 className="text-2xl font-bold mb-4">Pedidos · Cruceros</h1>
-      <table className="w-full border">
+      <table className="w-full border text-sm">
         <thead>
           <tr className="bg-slate-200 text-left">
             <th className="p-2">Fecha</th>
@@ -35,7 +46,7 @@ function Cruceros() {
           </tr>
         </thead>
         <tbody>
-          {rows.map((r, i) => (
+          {rows.map((r,i)=>(
             <tr key={i} className="odd:bg-slate-50">
               <td className="p-2">{r.service_date}</td>
               <td className="p-2">{r.ship}</td>
@@ -50,5 +61,3 @@ function Cruceros() {
     </div>
   );
 }
-
-export default Cruceros;
