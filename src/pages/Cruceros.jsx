@@ -8,7 +8,7 @@ export default function Cruceros() {
 
   useEffect(() => {
     const jwt = localStorage.getItem("access");
-    fetch(`${API_BASE}/api/pedidos/cruceros/`, {
+    fetch(`${API_BASE}/api/pedidos/cruceros/bulk/`, {
       headers: { Authorization: jwt ? `Bearer ${jwt}` : "" },
     })
       .then(async (r) => {
