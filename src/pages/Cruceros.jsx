@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useState } from "react";
-import useCruiseFilters from "@/hooks/useCruiseFilters";
-import CruiseFilters from "@/components/CruiseFilters";
+import useCruiseFilters from "../hooks/useCruiseFilters";
+import CruiseFilters from "../components/CruiseFilters";
 
 const API_BASE = import.meta.env.VITE_API_URL || "";
 
