@@ -10,10 +10,10 @@ export default function Cruceros() {
   const [loading, setLoad] = useState(true);
   const [error, setError] = useState(null);
 
-  // ⬇️ Sort toggle for DATES (Asc | Desc)
+  // Toggle de orden para las FECHAS (asc | desc)
   const [sortDir, setSortDir] = useState("asc");
 
-  // Fetch data
+  // Fetch inicial
   useEffect(() => {
     const jwt = localStorage.getItem("access");
     fetch(`${API_BASE}/api/pedidos/cruceros/bulk/?ordering=-updated_at,-uploaded_at`, {
@@ -28,18 +28,14 @@ export default function Cruceros() {
       .finally(() => setLoad(false));
   }, []);
 
-  // Filters (date presets + ship + counts)
+  // Filtros (solo fecha)
   const {
-    ships,
     selectedDateKey, setSelectedDateKey,
-    selectedShip, setSelectedShip,
-    showCounts, setShowCounts,
-    countsByShip,
     filtered,
     clearAll,
   } = useCruiseFilters(rows);
 
-  // Group by date > ship (safe keys + numeric sign sort)
+  // Agrupar por fecha > barco (seguimos mostrando por barco, pero sin filtro por barco)
   const grouped = useMemo(() => {
     const byDate = {};
     for (const r of filtered) {
@@ -58,7 +54,7 @@ export default function Cruceros() {
       };
       byDate[dKey][sKey].items.push(r);
     }
-    // internal sort by numeric bus sign (ASC)
+    // Orden interno por sign numérico ASC (robusto)
     Object.values(byDate).forEach((byShip) => {
       Object.values(byShip).forEach((group) => {
         group.items.sort(
@@ -69,7 +65,7 @@ export default function Cruceros() {
     return byDate;
   }, [filtered]);
 
-  // Date keys ordered by toggle
+  // Lista de fechas según el toggle asc/desc
   const dateKeys = useMemo(
     () =>
       Object.keys(grouped).sort((a, b) =>
@@ -85,27 +81,21 @@ export default function Cruceros() {
     <div className="p-4 max-w-6xl mx-auto space-y-6">
       <h1 className="text-3xl font-bold text-center mb-2">Pedidos · Cruceros</h1>
 
-      {/* Filters */}
+      {/* Filtros (solo fecha) */}
       <CruiseFilters
-        ships={ships}
         selectedDateKey={selectedDateKey}
         setSelectedDateKey={setSelectedDateKey}
-        selectedShip={selectedShip}
-        setSelectedShip={setSelectedShip}
-        countsByShip={countsByShip}
-        showCounts={showCounts}
-        setShowCounts={setShowCounts}
         onClearAll={clearAll}
       />
 
-      {/* Summary + ⬇️ Sort buttons (Asc/Desc) right next to "Showing X records" */}
+      {/* Resumen + Sort toggle */}
       <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
         <span className="text-sm text-slate-600">
           Showing <b>{filtered.length}</b> records
         </span>
 
         <div className="flex items-center gap-3">
-          {/* Sort toggle */}
+          {/* Toggle de orden de fechas */}
           <div className="flex items-center gap-2 text-sm">
             <span className="text-slate-500">Sort by:</span>
             <div className="inline-flex overflow-hidden rounded-lg border border-slate-300">
@@ -135,14 +125,10 @@ export default function Cruceros() {
               </button>
             </div>
           </div>
-
-          <span className="text-xs px-2 py-1 rounded-lg bg-[#005dab]/10 text-[#005dab]">
-            {selectedShip || "All ships"}
-          </span>
         </div>
       </div>
 
-      {/* Grouped cards by date → ship */}
+      {/* Tarjetas agrupadas por fecha → barco (visual, sin filtro por barco) */}
       {dateKeys.map((date) => (
         <div key={date} className="bg-white rounded-xl shadow">
           <div className="bg-sky-600 text-white px-4 py-2 rounded-t-xl">
