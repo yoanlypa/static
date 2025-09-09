@@ -63,11 +63,17 @@ export default function useCruiseFilters(rows) {
     return c;
   }, [dateFiltered]);
 
+  // Nota: el orden interno por fecha no es crítico porque agrupamos por fecha después.
   const filtered = useMemo(() => {
     const base = selectedShip ? dateFiltered.filter(r => r.ship === selectedShip) : dateFiltered;
     return [...base].sort((a, b) => {
-      if (a.service_date !== b.service_date) return b.service_date.localeCompare(a.service_date);
-      if ((a.ship || "") !== (b.ship || "")) return (a.ship || "").localeCompare(b.ship || "");
+      // fecha ASC por defecto (YYYY-MM-DD funciona con localeCompare)
+      const da = a.service_date || "", db = b.service_date || "";
+      if (da !== db) return da.localeCompare(db);
+      // barco ASC
+      const sa = a.ship || "", sb = b.ship || "";
+      if (sa !== sb) return sa.localeCompare(sb);
+      // sign numérico ASC
       const na = parseInt(a.sign, 10), nb = parseInt(b.sign, 10);
       if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
       return (a.sign || "").localeCompare(b.sign || "");
