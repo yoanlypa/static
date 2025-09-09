@@ -1,22 +1,19 @@
 import React from "react";
 
 const DATE_PRESETS = [
-  { key: "any", label: "Any date" },
+  { key: "any",   label: "Any date" },
   { key: "today", label: "Today" },
   { key: "past7", label: "Past 7 days" },
   { key: "month", label: "This month" },
-  { key: "year", label: "This year" },
+  { key: "year",  label: "This year" },
 ];
 
 export default function CruiseFilters({
   ships,
-  selectedDateKey,
-  setSelectedDateKey,
-  selectedShip,
-  setSelectedShip,
+  selectedDateKey, setSelectedDateKey,
+  selectedShip, setSelectedShip,
   countsByShip,
-  showCounts,
-  setShowCounts,
+  showCounts, setShowCounts,
   onClearAll,
 }) {
   return (
@@ -43,10 +40,11 @@ export default function CruiseFilters({
         </div>
       </div>
 
+      {/* By service date */}
       <div className="mt-3">
         <div className="text-xs font-medium text-slate-500 mb-1">By service date:</div>
         <div className="flex flex-wrap gap-2">
-          {DATE_PRESETS.map(opt => {
+          {DATE_PRESETS.map((opt) => {
             const active = selectedDateKey === opt.key;
             return (
               <button
@@ -65,6 +63,7 @@ export default function CruiseFilters({
         </div>
       </div>
 
+      {/* By ship */}
       <div className="mt-4">
         <div className="text-xs font-medium text-slate-500 mb-1">By ship:</div>
         <div className="flex flex-wrap gap-2 max-h-[200px] overflow-auto pr-1">
@@ -79,7 +78,7 @@ export default function CruiseFilters({
             All{showCounts ? ` (${countsByShip["__all__"] ?? 0})` : ""}
           </button>
 
-          {ships.map(ship => {
+          {ships.map((ship) => {
             const active = selectedShip === ship;
             return (
               <button
@@ -98,6 +97,7 @@ export default function CruiseFilters({
         </div>
       </div>
 
+      {/* Active chips */}
       <div className="mt-4 flex flex-wrap items-center gap-2">
         <span className="text-xs text-slate-500">Active:</span>
         <span className="text-xs px-2 py-1 rounded-lg bg-[#005dab]/10 text-[#005dab]">
