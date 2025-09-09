@@ -8,6 +8,8 @@ export default function Cruceros() {
   const [rows, setRows]     = useState([]);
   const [loading, setLoad]  = useState(true);
   const [error, setError]   = useState(null);
+  const [sortDir, setSortDir] = useState("asc"); // "asc" | "desc"
+
 
   useEffect(() => {
     const jwt = localStorage.getItem("access");
