@@ -137,7 +137,7 @@ const dateKeys = useMemo(
 
 
       {/* Tarjetas agrupadas (igual que tenías, con bugfix del spread) */}
-      {dateKeysDesc.map((date) => (
+      {dateKeys.map((date) => (
         <div key={date} className="bg-white rounded-xl shadow">
           <div className="bg-sky-600 text-white px-4 py-2 rounded-t-xl">
             <h2 className="text-lg font-semibold">Fecha de servicio: {date}</h2>
