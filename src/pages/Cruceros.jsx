@@ -63,10 +63,14 @@ export default function Cruceros() {
     return byDate;
   }, [filtered]);
 
-  const dateKeysDesc = useMemo(
-    () => Object.keys(grouped).sort((a, b) => b.localeCompare(a)),
-    [grouped]
-  );
+const dateKeys = useMemo(
+  () =>
+    Object.keys(grouped).sort((a, b) =>
+      sortDir === "asc" ? a.localeCompare(b) : b.localeCompare(a)
+    ),
+  [grouped, sortDir]
+);
+
 
   if (loading) return <p className="p-4">Cargando…</p>;
   if (error)   return <pre className="p-4 text-red-600">{error}</pre>;
