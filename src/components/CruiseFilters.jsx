@@ -1,10 +1,10 @@
-// src/components/CruiseFilters.jsx
 import React from "react";
 
 const DATE_PRESETS = [
   { key: "any",   label: "Any date" },
   { key: "today", label: "Today" },
   { key: "past7", label: "Past 7 days" },
+  { key: "week",  label: "This week" },   // ← NUEVO
   { key: "month", label: "This month" },
   { key: "year",  label: "This year" },
 ];
@@ -58,6 +58,7 @@ export default function CruiseFilters({
             any: "Any date",
             today: "Today",
             past7: "Past 7 days",
+            week: "This week",       // ← NUEVO
             month: "This month",
             year: "This year",
           }[selectedDateKey] || "Any date"}
