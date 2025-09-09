@@ -25,16 +25,44 @@ function isThisYear(base, target) {
   return base && target && base.getUTCFullYear() === target.getUTCFullYear();
 }
 
+// Semana ISO (lunes→domingo) en UTC
+function startOfISOWeekUTC(dateUTC) {
+  const day = dateUTC.getUTCDay() || 7; // Dom=0 → 7
+  const start = new Date(Date.UTC(
+    dateUTC.getUTCFullYear(),
+    dateUTC.getUTCMonth(),
+    dateUTC.getUTCDate()
+  ));
+  start.setUTCDate(start.getUTCDate() - (day - 1));
+  start.setUTCHours(0, 0, 0, 0);
+  return start;
+}
+function endOfISOWeekUTC(dateUTC) {
+  const start = startOfISOWeekUTC(dateUTC);
+  const end = new Date(start);
+  end.setUTCDate(start.getUTCDate() + 6);
+  end.setUTCHours(23, 59, 59, 999);
+  return end;
+}
+
 function applyDatePreset(rows, key) {
   if (key === "any") return rows;
   const now = new Date();
-  const todayUTC = new Date(Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()));
+  const todayUTC = new Date(Date.UTC(
+    now.getUTCFullYear(), now.getUTCMonth(), now.getUTCDate()
+  ));
+
   return rows.filter(r => {
     const d = parseISODateUTC(r.service_date);
     if (!d) return false;
     switch (key) {
       case "today": return isSameUTCDate(todayUTC, d);
       case "past7": return inLastDays(todayUTC, d, 7);
+      case "week": {
+        const start = startOfISOWeekUTC(todayUTC);
+        const end = endOfISOWeekUTC(todayUTC);
+        return d >= start && d <= end;
+      }
       case "month": return isThisMonth(todayUTC, d);
       case "year":  return isThisYear(todayUTC, d);
       default: return true;
@@ -45,7 +73,7 @@ function applyDatePreset(rows, key) {
 export default function useCruiseFilters(rows) {
   const [selectedDateKey, setSelectedDateKey] = useState("any");
 
-  // solo filtramos por fecha (sin filtro de barco)
+  // Solo filtramos por fecha (sin filtro de barco)
   const filtered = useMemo(
     () => applyDatePreset(rows, selectedDateKey),
     [rows, selectedDateKey]
@@ -59,3 +87,4 @@ export default function useCruiseFilters(rows) {
     clearAll,
   };
 }
+
