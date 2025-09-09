@@ -88,15 +88,49 @@ export default function Cruceros() {
         onClearAll={clearAll}
       />
 
-      {/* Resumen */}
-      <div className="flex items-center justify-between">
-        <span className="text-sm text-slate-600">
-          Showing <b>{filtered.length}</b> records
-        </span>
-        <span className="text-xs px-2 py-1 rounded-lg bg-[#005dab]/10 text-[#005dab]">
-          {selectedShip || "All ships"}
-        </span>
+  <div className="flex flex-col md:flex-row md:items-center md:justify-between gap-2">
+  <span className="text-sm text-slate-600">
+    Showing <b>{filtered.length}</b> records
+  </span>
+
+  <div className="flex items-center gap-3">
+    {/* Sort toggle */}
+    <div className="flex items-center gap-2 text-sm">
+      <span className="text-slate-500">Sort by:</span>
+      <div className="inline-flex overflow-hidden rounded-lg border border-slate-300">
+        <button
+          type="button"
+          onClick={() => setSortDir("asc")}
+          aria-pressed={sortDir === "asc"}
+          className={`px-2.5 py-1 text-xs font-medium ${
+            sortDir === "asc"
+              ? "bg-[#005dab] text-white"
+              : "bg-white text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          Ascendente
+        </button>
+        <button
+          type="button"
+          onClick={() => setSortDir("desc")}
+          aria-pressed={sortDir === "desc"}
+          className={`px-2.5 py-1 text-xs font-medium border-l border-slate-300 ${
+            sortDir === "desc"
+              ? "bg-[#005dab] text-white"
+              : "bg-white text-slate-700 hover:bg-slate-50"
+          }`}
+        >
+          Descendente
+        </button>
       </div>
+    </div>
+
+    <span className="text-xs px-2 py-1 rounded-lg bg-[#005dab]/10 text-[#005dab]">
+      {selectedShip || "All ships"}
+    </span>
+  </div>
+</div>
+
 
       {/* Tarjetas agrupadas (igual que tenías, con bugfix del spread) */}
       {dateKeysDesc.map((date) => (
