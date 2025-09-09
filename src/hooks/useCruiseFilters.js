@@ -44,50 +44,17 @@ function applyDatePreset(rows, key) {
 
 export default function useCruiseFilters(rows) {
   const [selectedDateKey, setSelectedDateKey] = useState("any");
-  const [selectedShip, setSelectedShip] = useState("");
-  const [showCounts, setShowCounts] = useState(true);
 
-  const ships = useMemo(() => {
-    const set = new Set(rows.map(r => r.ship).filter(Boolean));
-    return Array.from(set).sort((a, b) => a.localeCompare(b));
-  }, [rows]);
-
-  const dateFiltered = useMemo(
+  // solo filtramos por fecha (sin filtro de barco)
+  const filtered = useMemo(
     () => applyDatePreset(rows, selectedDateKey),
     [rows, selectedDateKey]
   );
 
-  const countsByShip = useMemo(() => {
-    const c = { "__all__": dateFiltered.length };
-    for (const r of dateFiltered) if (r.ship) c[r.ship] = (c[r.ship] || 0) + 1;
-    return c;
-  }, [dateFiltered]);
-
-  // Nota: el orden interno por fecha no es crítico porque agrupamos por fecha después.
-  const filtered = useMemo(() => {
-    const base = selectedShip ? dateFiltered.filter(r => r.ship === selectedShip) : dateFiltered;
-    return [...base].sort((a, b) => {
-      // fecha ASC por defecto (YYYY-MM-DD funciona con localeCompare)
-      const da = a.service_date || "", db = b.service_date || "";
-      if (da !== db) return da.localeCompare(db);
-      // barco ASC
-      const sa = a.ship || "", sb = b.ship || "";
-      if (sa !== sb) return sa.localeCompare(sb);
-      // sign numérico ASC
-      const na = parseInt(a.sign, 10), nb = parseInt(b.sign, 10);
-      if (Number.isFinite(na) && Number.isFinite(nb)) return na - nb;
-      return (a.sign || "").localeCompare(b.sign || "");
-    });
-  }, [dateFiltered, selectedShip]);
-
-  const clearAll = () => { setSelectedDateKey("any"); setSelectedShip(""); };
+  const clearAll = () => setSelectedDateKey("any");
 
   return {
-    ships,
     selectedDateKey, setSelectedDateKey,
-    selectedShip, setSelectedShip,
-    showCounts, setShowCounts,
-    countsByShip,
     filtered,
     clearAll,
   };
