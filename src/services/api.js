@@ -1,9 +1,9 @@
-import axios from 'axios';
-export const API_URL = import.meta.env.VITE_API_URL ?? '/api';
-const api = axios.create({
-  baseURL: import.meta.env.VITE_API_URL ?? '/api',
-  withCredentials: true,
-});
+ const API_ROOT = (import.meta.env.VITE_API_URL || '').replace(/\/$/, '');
+ // Si pones VITE_API_URL="https://tudominio.com", añadimos /api aquí:
+ const api = axios.create({
+   baseURL: `${API_ROOT}/api`,
+   withCredentials: true,
+ });
 
 let isRefreshing = false;
 let refreshSubscribers = [];
