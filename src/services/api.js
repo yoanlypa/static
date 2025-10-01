@@ -17,16 +17,13 @@ function addRefreshSubscriber(cb) {
   refreshSubscribers.push(cb);
 }
 
-api.interceptors.request.use(
-  (config) => {
-    const access = localStorage.getItem('access');
-    if (access) {
-      config.headers.Authorization = `Bearer ${access}`;
-    }
-    return config;
-  },
-  (error) => Promise.reject(error),
-);
+ api.interceptors.request.use((config) => {
+   const access = localStorage.getItem('access');
+   if (access) {
+     config.headers.Authorization = `Bearer ${access}`;
+   }
+   return config;
+ });
 
 api.interceptors.response.use(
   (response) => response,
@@ -47,10 +44,7 @@ api.interceptors.response.use(
       isRefreshing = true;
       try {
         const refresh = localStorage.getItem('refresh');
-        const { data } = await axios.post(
-          `${import.meta.env.VITE_API_URL ?? '/api'}/token/refresh/`,
-          { refresh }
-        );
+        const { data } = await api.post('token/refresh/', { refresh });
         localStorage.setItem('access', data.access);
         onRefreshed(data.access);
         originalRequest.headers.Authorization = `Bearer ${data.access}`;
