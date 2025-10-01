@@ -81,5 +81,15 @@ api.interceptors.response.use(
   }
 );
 
+export const opsApi = {
+   listOpsOrders: (params) => api.get("ops/pedidos/", { params }),
+   markDelivered: (id) => api.post(`ops/pedidos/${id}/delivered/`),
+   markCollected: (id) => api.post(`ops/pedidos/${id}/collected/`),
+ };
+
+export const meApi = {
+   getMe: () => api.get("me/"),
+ };
+
 export default api;
 export { API_ROOT };
