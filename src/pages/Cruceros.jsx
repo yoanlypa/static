@@ -2,8 +2,7 @@
 import { useEffect, useMemo, useState } from "react";
 import useCruiseFilters from "../hooks/useCruiseFilters.js";
 import CruiseFilters from "../components/CruiseFilters.jsx";
-
-const API_BASE = import.meta.env.VITE_API_URL || "";
+import api from "../services/api";
 
 export default function Cruceros() {
   const [rows, setRows] = useState([]);
@@ -13,24 +12,39 @@ export default function Cruceros() {
   // Toggle de orden para las FECHAS (asc | desc)
   const [sortDir, setSortDir] = useState("asc");
 
-  // Fetch inicial
+  // Fetch inicial (usando Axios `api` + refresh automático)
   useEffect(() => {
-    const jwt = localStorage.getItem("access");
-    fetch(`${API_BASE}/api/pedidos/cruceros/bulk/?ordering=-updated_at,-uploaded_at`, {
-      headers: { Authorization: jwt ? `Bearer ${jwt}` : "" },
-    })
-      .then(async (r) => {
-        if (!r.ok) throw new Error(`${r.status} ${r.statusText}`);
-        return r.json();
+    let alive = true;
+    setLoad(true);
+
+    const ordering =
+      sortDir === "asc" ? "updated_at,uploaded_at" : "-updated_at,-uploaded_at";
+
+    api
+      .get("pedidos/cruceros/bulk/", { params: { ordering } })
+      .then(({ data }) => {
+        if (!alive) return;
+        setRows(Array.isArray(data) ? data : []);
+        setError(null);
       })
-      .then((data) => setRows(Array.isArray(data) ? data : []))
-      .catch((e) => setError(e.message))
-      .finally(() => setLoad(false));
-  }, []);
+      .catch((err) => {
+        if (!alive) return;
+        const msg = err?.response?.data?.detail || err.message || "Error al cargar";
+        setError(msg);
+      })
+      .finally(() => {
+        if (alive) setLoad(false);
+      });
+
+    return () => {
+      alive = false;
+    };
+  }, [sortDir]);
 
   // Filtros (solo fecha)
   const {
-    selectedDateKey, setSelectedDateKey,
+    selectedDateKey,
+    setSelectedDateKey,
     filtered,
     clearAll,
   } = useCruiseFilters(rows);
@@ -145,15 +159,29 @@ export default function Cruceros() {
               return (
                 <details key={ship} className="mb-4 border rounded">
                   <summary className="cursor-pointer bg-slate-200 px-3 py-2 font-medium flex flex-wrap gap-x-6 gap-y-1">
-                    <span><strong>Barco:</strong> {ship}</span>
-                    <span><strong>Estado:</strong> {data.meta.status}</span>
-                    <span><strong>Terminal:</strong> {data.meta.terminal}</span>
-                    <span><strong>Impresión:</strong> {data.meta.printing_date}</span>
-                    <span><strong>Proveedor:</strong> {data.meta.supplier}</span>
+                    <span>
+                      <strong>Barco:</strong> {ship}
+                    </span>
+                    <span>
+                      <strong>Estado:</strong> {data.meta.status}
+                    </span>
+                    <span>
+                      <strong>Terminal:</strong> {data.meta.terminal}
+                    </span>
+                    <span>
+                      <strong>Impresión:</strong> {data.meta.printing_date}
+                    </span>
+                    <span>
+                      <strong>Proveedor:</strong> {data.meta.supplier}
+                    </span>
                     {data.meta.emergency_contact && (
-                      <span><strong>Contacto:</strong> {data.meta.emergency_contact}</span>
+                      <span>
+                        <strong>Contacto:</strong> {data.meta.emergency_contact}
+                      </span>
                     )}
-                    <span className="ml-auto">{items.length} exc · {totalPax} pax</span>
+                    <span className="ml-auto">
+                      {items.length} exc · {totalPax} pax
+                    </span>
                   </summary>
 
                   <table className="w-full text-sm">
