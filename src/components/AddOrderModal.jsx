@@ -3,10 +3,18 @@ import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { opsApi } from "../services/api";
 
+// Opciones de tipo de servicio (value → lo que guardas en BD, label → lo que se muestra)
+const TIPO_SERVICIO_OPTS = [
+  { value: "", label: "— Sin especificar —" },
+  { value: "manana", label: "Mañana" },
+  { value: "mediodia", label: "Mediodía" },
+  { value: "tarde", label: "Tarde" },
+  { value: "dia_completo", label: "Día completo" },
+];
+
 function toISO(dateStr, timeStr) {
   if (!dateStr) return null;
   const t = timeStr && timeStr.trim() ? timeStr : "00:00";
-  // construye ISO en Z (UTC) a partir de fecha+hora locales
   const [h, m] = t.split(":").map((x) => parseInt(x || "0", 10));
   const d = new Date(dateStr);
   d.setHours(h || 0, m || 0, 0, 0);
@@ -30,12 +38,12 @@ export default function AddOrderModal({ open, onClose }) {
     pax: "",
     bono: "",
     guia: "",
-    tipo_servicio: "",
+    tipo_servicio: "", // ahora siempre viene del <select>
     notas: "",
   });
 
   const disabled = useMemo(() => {
-    // requisitos mínimos: empresa_id, fecha_inicio
+    // requisitos mínimos: empresa_id, fecha_inicio (día)
     return !(form.empresa_id && form.fecha_inicio_d);
   }, [form]);
 
@@ -52,7 +60,7 @@ export default function AddOrderModal({ open, onClose }) {
         pax: form.pax ? Number(form.pax) : 0,
         bono: form.bono || "",
         guia: form.guia || "",
-        tipo_servicio: form.tipo_servicio || "",
+        tipo_servicio: form.tipo_servicio || "", // valor del select
         notas: form.notas || "",
       };
       return opsApi.createOrder(payload);
@@ -86,6 +94,7 @@ export default function AddOrderModal({ open, onClose }) {
                 value={form.empresa_id}
                 onChange={(e) => setForm({ ...form, empresa_id: e.target.value })}
               />
+              <span className="text-xs text-slate-500">Más adelante lo cambiamos por un selector.</span>
             </label>
 
             <label className="text-sm">
@@ -201,11 +210,20 @@ export default function AddOrderModal({ open, onClose }) {
 
             <label className="text-sm">
               Tipo de servicio
-              <input
+              <select
                 className="w-full border rounded p-2"
                 value={form.tipo_servicio}
                 onChange={(e) => setForm({ ...form, tipo_servicio: e.target.value })}
-              />
+              >
+                {TIPO_SERVICIO_OPTS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>
+                    {opt.label}
+                  </option>
+                ))}
+              </select>
+              <span className="text-xs text-slate-500">
+                Si más adelante quieres restringir los valores en backend, usamos estos mismos.
+              </span>
             </label>
 
             <label className="text-sm md:col-span-2">
