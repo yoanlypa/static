@@ -59,6 +59,7 @@ export default function AddOrderModal({ open, onClose }) {
         fecha_inicio: toISO(form.fecha_inicio_d, form.fecha_inicio_t),
         fecha_fin: form.fecha_fin_d ? toISO(form.fecha_fin_d, form.fecha_fin_t) : null,
         pax: form.pax ? Number(form.pax) : 0,
+        emisores: form.emisores || "", 
         bono: form.bono || "",
         guia: form.guia || "",
         tipo_servicio: form.tipo_servicio || "", // valor del select
@@ -188,6 +189,14 @@ export default function AddOrderModal({ open, onClose }) {
                 className="w-full border rounded p-2"
                 value={form.pax}
                 onChange={(e) => setForm({ ...form, pax: e.target.value })}
+              />
+            </label>
+            <label className="text-sm">
+              Emisores
+              <input
+                className="w-full border rounded p-2"
+                value={form.emisores}
+                onChange={(e) => setForm({ ...form, emisores: e.target.value })}
               />
             </label>
 
