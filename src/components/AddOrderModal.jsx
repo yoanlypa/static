@@ -36,6 +36,7 @@ export default function AddOrderModal({ open, onClose }) {
     fecha_fin_d: "",
     fecha_fin_t: "",
     pax: "",
+    emisores: "",
     bono: "",
     guia: "",
     tipo_servicio: "", // ahora siempre viene del <select>
