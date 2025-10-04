@@ -3,13 +3,12 @@ import { useState, useMemo } from "react";
 import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { opsApi } from "../services/api";
 
-// Opciones de tipo de servicio (value → lo que guardas en BD, label → lo que se muestra)
 const TIPO_SERVICIO_OPTS = [
   { value: "", label: "— Sin especificar —" },
-  { value: "manana", label: "Mañana" },
-  { value: "mediodia", label: "Mediodía" },
-  { value: "tarde", label: "Tarde" },
   { value: "dia_completo", label: "Día completo" },
+  { value: "circuito", label: "Circuito" },
+  { value: "mismo_dia", label: "Mismo día" },
+  { value: "crucero", label: "Crucero" }, // Nota: este modal es para pedido “estándar”; para crucero usaremos otro modal
 ];
 
 function toISO(dateStr, timeStr) {
@@ -36,17 +35,14 @@ export default function AddOrderModal({ open, onClose }) {
     fecha_fin_d: "",
     fecha_fin_t: "",
     pax: "",
-    emisores: "",
     bono: "",
     guia: "",
-    tipo_servicio: "", // ahora siempre viene del <select>
+    tipo_servicio: "", // ahora con las 4 opciones
+    emisores: "",
     notas: "",
   });
 
-  const disabled = useMemo(() => {
-    // requisitos mínimos: empresa_id, fecha_inicio (día)
-    return !(form.empresa_id && form.fecha_inicio_d);
-  }, [form]);
+  const disabled = useMemo(() => !(form.empresa_id && form.fecha_inicio_d), [form]);
 
   const createMut = useMutation({
     mutationFn: async () => {
@@ -59,10 +55,10 @@ export default function AddOrderModal({ open, onClose }) {
         fecha_inicio: toISO(form.fecha_inicio_d, form.fecha_inicio_t),
         fecha_fin: form.fecha_fin_d ? toISO(form.fecha_fin_d, form.fecha_fin_t) : null,
         pax: form.pax ? Number(form.pax) : 0,
-        emisores: form.emisores || "", 
         bono: form.bono || "",
         guia: form.guia || "",
-        tipo_servicio: form.tipo_servicio || "", // valor del select
+        tipo_servicio: form.tipo_servicio || "",
+        emisores: form.emisores || "",
         notas: form.notas || "",
       };
       return opsApi.createOrder(payload);
@@ -77,10 +73,7 @@ export default function AddOrderModal({ open, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50">
-      <div
-        className="absolute inset-0 bg-black/40"
-        onClick={() => !createMut.isPending && onClose?.()}
-      />
+      <div className="absolute inset-0 bg-black/40" onClick={() => !createMut.isPending && onClose?.()} />
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="w-full max-w-2xl bg-white rounded-xl shadow-xl">
           <div className="px-4 py-3 border-b">
@@ -96,7 +89,6 @@ export default function AddOrderModal({ open, onClose }) {
                 value={form.empresa_id}
                 onChange={(e) => setForm({ ...form, empresa_id: e.target.value })}
               />
-              <span className="text-xs text-slate-500">Más adelante lo cambiamos por un selector.</span>
             </label>
 
             <label className="text-sm">
@@ -110,6 +102,22 @@ export default function AddOrderModal({ open, onClose }) {
                 <option value="entregado">Entregado</option>
                 <option value="recogido">Recogido</option>
               </select>
+            </label>
+
+            <label className="text-sm">
+              Tipo de servicio
+              <select
+                className="w-full border rounded p-2"
+                value={form.tipo_servicio}
+                onChange={(e) => setForm({ ...form, tipo_servicio: e.target.value })}
+              >
+                {TIPO_SERVICIO_OPTS.map((opt) => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
+                ))}
+              </select>
+              <span className="text-xs text-slate-500">
+                Para “Crucero” usa el botón “Nuevo crucero” (tiene su propio formulario).
+              </span>
             </label>
 
             <label className="text-sm md:col-span-2">
@@ -191,14 +199,6 @@ export default function AddOrderModal({ open, onClose }) {
                 onChange={(e) => setForm({ ...form, pax: e.target.value })}
               />
             </label>
-            <label className="text-sm">
-              Emisores
-              <input
-                className="w-full border rounded p-2"
-                value={form.emisores}
-                onChange={(e) => setForm({ ...form, emisores: e.target.value })}
-              />
-            </label>
 
             <label className="text-sm">
               Bono
@@ -219,21 +219,12 @@ export default function AddOrderModal({ open, onClose }) {
             </label>
 
             <label className="text-sm">
-              Tipo de servicio
-              <select
+              Emisores
+              <input
                 className="w-full border rounded p-2"
-                value={form.tipo_servicio}
-                onChange={(e) => setForm({ ...form, tipo_servicio: e.target.value })}
-              >
-                {TIPO_SERVICIO_OPTS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>
-                    {opt.label}
-                  </option>
-                ))}
-              </select>
-              <span className="text-xs text-slate-500">
-                Si más adelante quieres restringir los valores en backend, usamos estos mismos.
-              </span>
+                value={form.emisores}
+                onChange={(e) => setForm({ ...form, emisores: e.target.value })}
+              />
             </label>
 
             <label className="text-sm md:col-span-2">
@@ -248,18 +239,8 @@ export default function AddOrderModal({ open, onClose }) {
           </div>
 
           <div className="px-4 py-3 border-t flex items-center justify-end gap-2">
-            <button
-              className="px-4 py-2 rounded border"
-              onClick={() => !createMut.isPending && onClose?.()}
-              disabled={createMut.isPending}
-            >
-              Cancelar
-            </button>
-            <button
-              className="px-4 py-2 rounded bg-[#005dab] text-white disabled:opacity-60"
-              onClick={() => createMut.mutate()}
-              disabled={disabled || createMut.isPending}
-            >
+            <button className="px-4 py-2 rounded border" onClick={() => !createMut.isPending && onClose?.()} disabled={createMut.isPending}>Cancelar</button>
+            <button className="px-4 py-2 rounded bg-[#005dab] text-white disabled:opacity-60" onClick={() => createMut.mutate()} disabled={disabled || createMut.isPending}>
               {createMut.isPending ? "Creando…" : "Crear pedido"}
             </button>
           </div>
