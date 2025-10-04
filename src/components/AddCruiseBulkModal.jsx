@@ -12,11 +12,23 @@ function emptyRow() {
   return { sign: "", excursion: "", language: "", pax: "", arrival_time: "" };
 }
 
+function Toast({ kind = "success", children, onClose }) {
+  const bg = kind === "error" ? "bg-red-600" : "bg-emerald-600";
+  return (
+    <div className={`fixed bottom-6 left-1/2 -translate-x-1/2 ${bg} text-white px-4 py-2 rounded shadow z-[60]`}>
+      <div className="flex items-center gap-3">
+        <span className="font-medium">{children}</span>
+        <button className="ml-2 underline" onClick={onClose}>Cerrar</button>
+      </div>
+    </div>
+  );
+}
+
 export default function AddCruiseBulkModal({ open, onClose }) {
   const qc = useQueryClient();
 
-  // META comunes a todas las excursiones (Crucero + Pedido)
   const [meta, setMeta] = useState({
+    empresa_id: "",
     service_date: "",
     ship: "",
     status: "preliminary",
@@ -25,15 +37,17 @@ export default function AddCruiseBulkModal({ open, onClose }) {
     emergency_contact: "",
     printing_date: "",
 
-    // extras para crear Pedidos
-    empresa_id: "",
     estado_pedido: "pagado",
     lugar_entrega: "",
     lugar_recogida: "",
-    emisores: "",
+    emisores: "",       // numérico o vacío
   });
-
   const [rows, setRows] = useState([emptyRow()]);
+
+  // Manejo de errores
+  const [generalErr, setGeneralErr] = useState("");
+  const [rowErrors, setRowErrors] = useState([]); // array de objetos por fila
+  const [showToast, setShowToast] = useState(null); // {kind, msg}
 
   const canSubmit = useMemo(() => {
     const baseOK = meta.service_date && meta.ship && meta.empresa_id;
@@ -43,43 +57,79 @@ export default function AddCruiseBulkModal({ open, onClose }) {
 
   const mut = useMutation({
     mutationFn: async () => {
-      const payload = {
-        meta: {
-          service_date: meta.service_date,
-          ship: meta.ship,
-          status: meta.status,
-          terminal: meta.terminal,
-          supplier: meta.supplier,
-          emergency_contact: meta.emergency_contact,
-          printing_date: meta.printing_date || null,
+      setGeneralErr("");
+      setRowErrors([]);
 
-          // para crear Pedidos
-          empresa: meta.empresa_id ? Number(meta.empresa_id) : null,
-          estado_pedido: meta.estado_pedido || "pagado",
-          lugar_entrega: meta.lugar_entrega || "",
-          lugar_recogida: meta.lugar_recogida || "",
-          emisores: meta.emisores || "",
-        },
-        rows: rows.map(r => ({
-          sign: r.sign || "",
-          excursion: r.excursion || "",
-          language: r.language || "",
-          pax: r.pax ? Number(r.pax) : 0,
-          arrival_time: r.arrival_time || "",
-        })),
+      // arma meta sin campos vacíos
+      const metaPayload = {
+        service_date: meta.service_date,
+        ship: meta.ship,
+        status: meta.status,
+        terminal: meta.terminal || undefined,
+        supplier: meta.supplier || undefined,
+        emergency_contact: meta.emergency_contact || undefined,
+        // printing_date solo si tiene valor
+        ...(meta.printing_date ? { printing_date: meta.printing_date } : {}),
+        // para crear Pedidos
+        empresa: meta.empresa_id ? Number(meta.empresa_id) : undefined,
+        estado_pedido: meta.estado_pedido || undefined,
+        lugar_entrega: meta.lugar_entrega || undefined,
+        lugar_recogida: meta.lugar_recogida || undefined,
       };
-      return opsApi.postCruiseBulk(payload);
+
+      // emisores: solo si es número válido
+      const emi = (meta.emisores || "").trim();
+      if (/^\d+$/.test(emi)) {
+        metaPayload.emisores = Number(emi);
+      }
+
+      const rowsPayload = rows.map(r => ({
+        sign: (r.sign || "").trim(),
+        excursion: (r.excursion || "").trim(),
+        language: (r.language || "").trim(),
+        pax: r.pax ? Number(r.pax) : 0,
+        arrival_time: (r.arrival_time || "").trim(),
+      }));
+
+      return opsApi.postCruiseBulk({ meta: metaPayload, rows: rowsPayload });
     },
-    onSuccess: () => {
-      // refresca el board para que aparezcan los Pedidos recién creados
+    onSuccess: (res) => {
       qc.invalidateQueries({ queryKey: ["ops-orders"] });
+      setShowToast({ kind: "success", msg: "Lote creado correctamente." });
       onClose?.();
+    },
+    onError: (err) => {
+      // DRF puede devolver lista de errores por fila o dict de errores
+      const data = err?.response?.data;
+      if (Array.isArray(data)) {
+        // errores por fila [{field: ["msg"]}, ...]
+        setRowErrors(data);
+        setShowToast({ kind: "error", msg: "Revisa los campos resaltados." });
+      } else if (data && typeof data === "object") {
+        // error general
+        setGeneralErr(JSON.stringify(data));
+        setShowToast({ kind: "error", msg: "No se pudo crear el lote." });
+      } else {
+        setGeneralErr(String(err));
+        setShowToast({ kind: "error", msg: "Error inesperado." });
+      }
     },
   });
 
   const addRow = () => setRows((rs) => [...rs, emptyRow()]);
-  const removeRow = (idx) => setRows((rs) => rs.filter((_, i) => i !== idx));
-  const updateRow = (idx, patch) => setRows((rs) => rs.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+  const removeRow = (idx) => {
+    setRows((rs) => rs.filter((_, i) => i !== idx));
+    setRowErrors((es) => es.filter((_, i) => i !== idx));
+  };
+  const updateRow = (idx, patch) => {
+    setRows((rs) => rs.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
+    // limpia errores de esa celda si existían
+    setRowErrors((es) => {
+      const copy = [...es];
+      copy[idx] = { ...(copy[idx] || {}), ...Object.fromEntries(Object.keys(patch).map(k => [k, undefined])) };
+      return copy;
+    });
+  };
 
   if (!open) return null;
 
@@ -92,10 +142,16 @@ export default function AddCruiseBulkModal({ open, onClose }) {
             <h3 className="text-lg font-semibold">Nuevo crucero (lote)</h3>
           </div>
 
+          {generalErr && (
+            <div className="mx-4 mt-3 rounded bg-red-50 border border-red-200 text-red-700 px-3 py-2 text-sm">
+              {generalErr}
+            </div>
+          )}
+
           {/* META */}
           <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
             <label className="text-sm">
-              Empresa ID * (para crear Pedidos)
+              Empresa ID * (creará Pedidos)
               <input
                 className="w-full border rounded p-2"
                 value={meta.empresa_id}
@@ -166,9 +222,12 @@ export default function AddCruiseBulkModal({ open, onClose }) {
                 value={meta.printing_date}
                 onChange={(e) => setMeta({ ...meta, printing_date: e.target.value })}
               />
+              <span className="text-xs text-slate-500">
+                (Opcional; si la dejas vacía no se enviará)
+              </span>
             </label>
             <label className="text-sm">
-              Estado de Pedido (creados)
+              Estado de los Pedidos
               <select
                 className="w-full border rounded p-2"
                 value={meta.estado_pedido}
@@ -187,7 +246,6 @@ export default function AddCruiseBulkModal({ open, onClose }) {
                 className="w-full border rounded p-2"
                 value={meta.lugar_entrega}
                 onChange={(e) => setMeta({ ...meta, lugar_entrega: e.target.value })}
-                placeholder="Ej. Terminal A"
               />
             </label>
             <label className="text-sm">
@@ -199,11 +257,12 @@ export default function AddCruiseBulkModal({ open, onClose }) {
               />
             </label>
             <label className="text-sm">
-              Emisores (común)
+              Emisores (ID numérico)
               <input
                 className="w-full border rounded p-2"
                 value={meta.emisores}
                 onChange={(e) => setMeta({ ...meta, emisores: e.target.value })}
+                placeholder="Ej: 12"
               />
             </label>
           </div>
@@ -223,28 +282,70 @@ export default function AddCruiseBulkModal({ open, onClose }) {
                   </tr>
                 </thead>
                 <tbody>
-                  {rows.map((r, idx) => (
-                    <tr key={idx} className="odd:bg-slate-50">
-                      <td className="p-2">
-                        <input className="w-full border rounded p-1" value={r.sign} onChange={(e) => updateRow(idx, { sign: e.target.value })} placeholder="Sign" />
-                      </td>
-                      <td className="p-2">
-                        <input className="w-full border rounded p-1" value={r.excursion} onChange={(e) => updateRow(idx, { excursion: e.target.value })} placeholder="Ej: City tour" />
-                      </td>
-                      <td className="p-2">
-                        <input className="w-full border rounded p-1" value={r.language} onChange={(e) => updateRow(idx, { language: e.target.value })} placeholder="ES/EN/FR…" />
-                      </td>
-                      <td className="p-2">
-                        <input type="number" min="0" className="w-full border rounded p-1" value={r.pax} onChange={(e) => updateRow(idx, { pax: e.target.value })} />
-                      </td>
-                      <td className="p-2">
-                        <input type="time" className="w-full border rounded p-1" value={r.arrival_time} onChange={(e) => updateRow(idx, { arrival_time: e.target.value })} />
-                      </td>
-                      <td className="p-2">
-                        <button className="px-2 py-1 text-xs rounded border hover:bg-slate-50" onClick={() => removeRow(idx)}>Eliminar</button>
-                      </td>
-                    </tr>
-                  ))}
+                  {rows.map((r, idx) => {
+                    const err = rowErrors[idx] || {};
+                    const errText = (k) => Array.isArray(err[k]) ? err[k].join(", ") : (err[k] || "");
+                    return (
+                      <tr key={idx} className="odd:bg-slate-50 align-top">
+                        <td className="p-2">
+                          <input
+                            className={`w-full border rounded p-1 ${err.sign ? "border-red-400" : ""}`}
+                            value={r.sign}
+                            onChange={(e) => updateRow(idx, { sign: e.target.value })}
+                            placeholder="Sign"
+                          />
+                          {err.sign && <div className="text-xs text-red-600 mt-1">{errText("sign")}</div>}
+                        </td>
+                        <td className="p-2">
+                          <input
+                            className={`w-full border rounded p-1 ${err.excursion ? "border-red-400" : ""}`}
+                            value={r.excursion}
+                            onChange={(e) => updateRow(idx, { excursion: e.target.value })}
+                            placeholder="Ej: City tour"
+                          />
+                          {err.excursion && <div className="text-xs text-red-600 mt-1">{errText("excursion")}</div>}
+                        </td>
+                        <td className="p-2">
+                          <input
+                            className={`w-full border rounded p-1 ${err.language ? "border-red-400" : ""}`}
+                            value={r.language}
+                            onChange={(e) => updateRow(idx, { language: e.target.value })}
+                            placeholder="ES/EN/FR…"
+                          />
+                          {err.language && <div className="text-xs text-red-600 mt-1">{errText("language")}</div>}
+                        </td>
+                        <td className="p-2">
+                          <input
+                            type="number"
+                            min="0"
+                            className={`w-full border rounded p-1 ${err.pax ? "border-red-400" : ""}`}
+                            value={r.pax}
+                            onChange={(e) => updateRow(idx, { pax: e.target.value })}
+                          />
+                          {err.pax && <div className="text-xs text-red-600 mt-1">{errText("pax")}</div>}
+                        </td>
+                        <td className="p-2">
+                          <input
+                            type="time"
+                            className={`w-full border rounded p-1 ${err.arrival_time ? "border-red-400" : ""}`}
+                            value={r.arrival_time}
+                            onChange={(e) => updateRow(idx, { arrival_time: e.target.value })}
+                          />
+                          {err.arrival_time && <div className="text-xs text-red-600 mt-1">{errText("arrival_time")}</div>}
+                          {/* Si el backend devuelve error de printing_date como fila, muéstralo aquí también */}
+                          {err.printing_date && <div className="text-xs text-red-600 mt-1">{errText("printing_date")}</div>}
+                        </td>
+                        <td className="p-2">
+                          <button
+                            className="px-2 py-1 text-xs rounded border hover:bg-slate-50"
+                            onClick={() => removeRow(idx)}
+                          >
+                            Eliminar
+                          </button>
+                        </td>
+                      </tr>
+                    );
+                  })}
                 </tbody>
               </table>
             </div>
@@ -262,6 +363,12 @@ export default function AddCruiseBulkModal({ open, onClose }) {
           </div>
         </div>
       </div>
+
+      {showToast && (
+        <Toast kind={showToast.kind} onClose={() => setShowToast(null)}>
+          {showToast.msg}
+        </Toast>
+      )}
     </div>
   );
 }
