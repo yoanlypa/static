@@ -239,32 +239,6 @@ export default function AddCruiseBulkModal({ open, onClose }) {
                 <option value="pendiente_pago">Pendiente pago</option>
               </select>
             </label>
-
-            <label className="text-sm">
-              Lugar de entrega (común)
-              <input
-                className="w-full border rounded p-2"
-                value={meta.lugar_entrega}
-                onChange={(e) => setMeta({ ...meta, lugar_entrega: e.target.value })}
-              />
-            </label>
-            <label className="text-sm">
-              Lugar de recogida (común)
-              <input
-                className="w-full border rounded p-2"
-                value={meta.lugar_recogida}
-                onChange={(e) => setMeta({ ...meta, lugar_recogida: e.target.value })}
-              />
-            </label>
-            <label className="text-sm">
-              Emisores (ID numérico)
-              <input
-                className="w-full border rounded p-2"
-                value={meta.emisores}
-                onChange={(e) => setMeta({ ...meta, emisores: e.target.value })}
-                placeholder="Ej: 12"
-              />
-            </label>
           </div>
 
           {/* Tabla de excursiones */}
