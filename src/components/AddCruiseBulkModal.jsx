@@ -35,11 +35,7 @@ export default function AddCruiseBulkModal({ open, onClose }) {
     terminal: "",
     supplier: "",
     emergency_contact: "",
-    // printing_date — NO se envía; la pone el backend
     estado_pedido: "pagado",
-    lugar_entrega: "",
-    lugar_recogida: "",
-    emisores: "", // numérico opcional
   });
   const [rows, setRows] = useState([emptyRow()]);
 
@@ -67,14 +63,9 @@ export default function AddCruiseBulkModal({ open, onClose }) {
         emergency_contact: meta.emergency_contact || undefined,
         empresa: meta.empresa_id ? Number(meta.empresa_id) : undefined,
         estado_pedido: meta.estado_pedido || undefined,
-        lugar_entrega: meta.lugar_entrega || undefined,
-        lugar_recogida: meta.lugar_recogida || undefined,
-        // printing_date NO se envía
+        // eliminados: emisores, lugar_entrega, lugar_recogida
+        // printing_date NO se envía; lo fija el backend
       };
-
-      // emisores: solo si es número
-      const emi = (meta.emisores || "").trim();
-      if (/^\d+$/.test(emi)) metaPayload.emisores = Number(emi);
 
       const rowsPayload = rows.map(r => ({
         sign: (r.sign || "").trim(),
@@ -141,7 +132,7 @@ export default function AddCruiseBulkModal({ open, onClose }) {
             </div>
           )}
 
-          {/* META (sin printing_date) */}
+          {/* META */}
           <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
             <label className="text-sm">
               Empresa ID * (creará Pedidos)
@@ -219,32 +210,6 @@ export default function AddCruiseBulkModal({ open, onClose }) {
                 <option value="recogido">Recogido</option>
                 <option value="pendiente_pago">Pendiente pago</option>
               </select>
-            </label>
-            <label className="text-sm">
-              Emisores (ID numérico)
-              <input
-                className="w-full border rounded p-2"
-                value={meta.emisores}
-                onChange={(e) => setMeta({ ...meta, emisores: e.target.value })}
-                placeholder="Ej: 12"
-              />
-            </label>
-
-            <label className="text-sm md:col-span-3">
-              Lugar de entrega (común)
-              <input
-                className="w-full border rounded p-2"
-                value={meta.lugar_entrega}
-                onChange={(e) => setMeta({ ...meta, lugar_entrega: e.target.value })}
-              />
-            </label>
-            <label className="text-sm md:col-span-3">
-              Lugar de recogida (común)
-              <input
-                className="w-full border rounded p-2"
-                value={meta.lugar_recogida}
-                onChange={(e) => setMeta({ ...meta, lugar_recogida: e.target.value })}
-              />
             </label>
           </div>
 
