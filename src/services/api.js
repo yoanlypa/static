@@ -70,6 +70,7 @@ api.interceptors.request.use((config) => {
     if ("hora_mediodia" in d) delete d.hora_mediodia;
 
     // emisores numérico u omitir
+    coerceIntOrDelete(d, "empresa");
     coerceIntOrDelete(d, "emisores");
   }
 
