@@ -137,10 +137,9 @@ api.interceptors.response.use(
 // ---------- Endpoints ----------
 export const opsApi = {
   listOpsOrders: (params) => api.get("ops/pedidos/", { params }),
-  markDelivered: (id) => api.post(`ops/pedidos/${id}/delivered/`),
+  markDelivered: (id, payload) => api.post(`ops/pedidos/${id}/delivered/`, payload),
   markCollected: (id) => api.post(`ops/pedidos/${id}/collected/`),
   createOrder: (payload) => api.post("ops/pedidos/", payload),
-
   postCruiseBulk: (rows) => api.post("pedidos/cruceros/bulk/", rows),
 };
 
