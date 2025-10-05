@@ -35,8 +35,6 @@ export default function AddCruiseBulkModal({ open, onClose }) {
     terminal: "",
     supplier: "",
     emergency_contact: "",
-    printing_date: "",
-
     estado_pedido: "pagado",
     lugar_entrega: "",
     lugar_recogida: "",
@@ -68,9 +66,6 @@ export default function AddCruiseBulkModal({ open, onClose }) {
         terminal: meta.terminal || undefined,
         supplier: meta.supplier || undefined,
         emergency_contact: meta.emergency_contact || undefined,
-        // printing_date solo si tiene valor
-        ...(meta.printing_date ? { printing_date: meta.printing_date } : {}),
-        // para crear Pedidos
         empresa: meta.empresa_id ? Number(meta.empresa_id) : undefined,
         estado_pedido: meta.estado_pedido || undefined,
         lugar_entrega: meta.lugar_entrega || undefined,
@@ -151,7 +146,7 @@ export default function AddCruiseBulkModal({ open, onClose }) {
           {/* META */}
           <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
             <label className="text-sm">
-              Empresa ID * (creará Pedidos)
+              Empresa ID 
               <input
                 className="w-full border rounded p-2"
                 value={meta.empresa_id}
@@ -214,14 +209,6 @@ export default function AddCruiseBulkModal({ open, onClose }) {
                 onChange={(e) => setMeta({ ...meta, emergency_contact: e.target.value })}
               />
             </label>
-            <label className="text-sm">
-              Fecha de impresión
-              <input
-                type="date"
-                className="w-full border rounded p-2"
-                value={meta.printing_date}
-                onChange={(e) => setMeta({ ...meta, printing_date: e.target.value })}
-              />
               <span className="text-xs text-slate-500">
                 (Opcional; si la dejas vacía no se enviará)
               </span>
