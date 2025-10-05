@@ -1,246 +1,327 @@
 // src/components/AddOrderModal.jsx
-import { useState, useMemo } from "react";
-import { useMutation, useQueryClient } from "@tanstack/react-query";
+import { useEffect, useState } from "react";
+import { useMutation } from "@tanstack/react-query";
 import { opsApi } from "../services/api";
+import { parseDRFError } from "../utils/drfErrors";
 
-const TIPO_SERVICIO_OPTS = [
-  { value: "", label: "— Sin especificar —" },
-  { value: "dia_completo", label: "Día completo" },
-  { value: "circuito", label: "Circuito" },
-  { value: "mismo_dia", label: "Mismo día" },
-  { value: "crucero", label: "Crucero" }, // Nota: este modal es para pedido “estándar”; para crucero usaremos otro modal
-];
-
-function toISO(dateStr, timeStr) {
-  if (!dateStr) return null;
-  const t = timeStr && timeStr.trim() ? timeStr : "00:00";
-  const [h, m] = t.split(":").map((x) => parseInt(x || "0", 10));
-  const d = new Date(dateStr);
-  d.setHours(h || 0, m || 0, 0, 0);
-  return new Date(d.getTime() - d.getTimezoneOffset() * 60000)
-    .toISOString()
-    .replace(/\.\d{3}Z$/, "Z");
-}
-
-export default function AddOrderModal({ open, onClose }) {
-  const qc = useQueryClient();
+export default function AddOrderModal({ open, onClose, onCreated }) {
   const [form, setForm] = useState({
-    empresa_id: "",
+    empresa: "",          // ID numérico de Empresa
     excursion: "",
-    estado: "pagado",
+    fecha_inicio: "",
+    fecha_fin: "",
+    estado: "pendiente_pago",
+    // Usa valores EXACTOS del modelo para evitar errores
+    tipo_servicio: "mediodia", // mediodia | dia_Completo | circuito | crucero
     lugar_entrega: "",
     lugar_recogida: "",
-    fecha_inicio_d: "",
-    fecha_inicio_t: "",
-    fecha_fin_d: "",
-    fecha_fin_t: "",
-    pax: "",
-    bono: "",
-    guia: "",
-    tipo_servicio: "", // ahora con las 4 opciones
-    emisores: "",
     notas: "",
+    bono: "",
+    emisores: "",
+    pax: "",
+    guia: "",
   });
 
-  const disabled = useMemo(() => !(form.empresa_id && form.fecha_inicio_d), [form]);
+  const [errors, setErrors] = useState(null);
+  const [banner, setBanner] = useState(null);
+
+  // Evitar scroll del body cuando el modal está abierto (móvil)
+  useEffect(() => {
+    if (!open) return;
+    const prev = document.body.style.overflow;
+    document.body.style.overflow = "hidden";
+    return () => {
+      document.body.style.overflow = prev || "";
+    };
+  }, [open]);
 
   const createMut = useMutation({
-    mutationFn: async () => {
-      const payload = {
-        empresa: form.empresa_id ? Number(form.empresa_id) : null,
-        excursion: form.excursion || "",
-        estado: form.estado || "pagado",
-        lugar_entrega: form.lugar_entrega || "",
-        lugar_recogida: form.lugar_recogida || "",
-        fecha_inicio: toISO(form.fecha_inicio_d, form.fecha_inicio_t),
-        fecha_fin: form.fecha_fin_d ? toISO(form.fecha_fin_d, form.fecha_fin_t) : null,
-        pax: form.pax ? Number(form.pax) : 0,
-        bono: form.bono || "",
-        guia: form.guia || "",
-        tipo_servicio: form.tipo_servicio || "",
-        emisores: form.emisores || "",
-        notas: form.notas || "",
-      };
-      return opsApi.createOrder(payload);
-    },
+    mutationFn: async () => opsApi.createOrder(form),
     onSuccess: () => {
-      qc.invalidateQueries({ queryKey: ["ops-orders"] });
-      onClose?.();
+      setBanner({ kind: "ok", msg: "Pedido creado correctamente" });
+      setErrors(null);
+      onCreated?.();
+      // reset
+      setForm({
+        empresa: "", excursion: "", fecha_inicio: "", fecha_fin: "",
+        estado: "pendiente_pago", tipo_servicio: "mediodia",
+        lugar_entrega: "", lugar_recogida: "", notas: "", bono: "",
+        emisores: "", pax: "", guia: "",
+      });
+    },
+    onError: (err) => {
+      setErrors(parseDRFError(err));
+      setBanner({ kind: "err", msg: "Revisa los campos marcados" });
     },
   });
 
   if (!open) return null;
 
+  const onSubmit = (e) => {
+    e.preventDefault();
+    createMut.mutate();
+  };
+
+  const set = (k) => (e) => setForm((f) => ({ ...f, [k]: e.target.value }));
+
+  // Utilidad para estilos de inputs en móvil (>=16px para evitar zoom iOS)
+  const inputCls = "w-full border rounded p-3 text-base";
+
   return (
-    <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/40" onClick={() => !createMut.isPending && onClose?.()} />
-      <div className="absolute inset-0 flex items-center justify-center p-4">
-        <div className="w-full max-w-2xl bg-white rounded-xl shadow-xl">
-          <div className="px-4 py-3 border-b">
-            <h3 className="text-lg font-semibold">Nuevo pedido</h3>
+    <div
+      className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      {/* Contenedor: pantalla completa en móvil, caja en desktop */}
+      <div className="w-full h-[100dvh] sm:h-auto sm:max-h-[90vh] sm:max-w-2xl bg-white rounded-t-2xl sm:rounded-xl shadow-lg flex flex-col">
+        {/* Header sticky */}
+        <div className="px-4 py-3 border-b bg-white sticky top-0 z-10">
+          <div className="flex items-center justify-between gap-2">
+            <h3 className="text-lg font-semibold">Crear pedido estándar</h3>
+            <button
+              className="text-slate-500 hover:text-slate-800 text-xl leading-none"
+              onClick={onClose}
+              aria-label="Cerrar"
+            >
+              ✕
+            </button>
           </div>
 
-          <div className="p-4 grid grid-cols-1 md:grid-cols-2 gap-3">
+          {banner && (
+            <div
+              className={`mt-3 rounded p-2 ${
+                banner.kind === "ok"
+                  ? "bg-emerald-100 text-emerald-700"
+                  : "bg-rose-100 text-rose-700"
+              }`}
+            >
+              {banner.msg}
+            </div>
+          )}
+        </div>
+
+        {/* Contenido desplazable */}
+        <form onSubmit={onSubmit} className="flex-1 overflow-y-auto px-4 py-4">
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
             <label className="text-sm">
-              Empresa ID *
+              Empresa (ID)
               <input
-                className="w-full border rounded p-2"
-                placeholder="ID numérico"
-                value={form.empresa_id}
-                onChange={(e) => setForm({ ...form, empresa_id: e.target.value })}
+                type="number"
+                className={inputCls}
+                value={form.empresa}
+                onChange={set("empresa")}
+                required
+                inputMode="numeric"
+                autoComplete="off"
               />
+              {errors?.empresa && (
+                <p className="text-rose-600 text-xs mt-1">{errors.empresa}</p>
+              )}
+            </label>
+
+            <label className="text-sm">
+              Excursión
+              <input
+                className={inputCls}
+                value={form.excursion}
+                onChange={set("excursion")}
+                autoComplete="off"
+              />
+              {errors?.excursion && (
+                <p className="text-rose-600 text-xs mt-1">{errors.excursion}</p>
+              )}
+            </label>
+
+            <label className="text-sm">
+              Fecha inicio
+              <input
+                type="date"
+                className={inputCls}
+                value={form.fecha_inicio}
+                onChange={set("fecha_inicio")}
+                required
+              />
+              {errors?.fecha_inicio && (
+                <p className="text-rose-600 text-xs mt-1">
+                  {errors.fecha_inicio}
+                </p>
+              )}
+            </label>
+
+            <label className="text-sm">
+              Fecha fin (opcional)
+              <input
+                type="date"
+                className={inputCls}
+                value={form.fecha_fin}
+                onChange={set("fecha_fin")}
+              />
+              {errors?.fecha_fin && (
+                <p className="text-rose-600 text-xs mt-1">{errors.fecha_fin}</p>
+              )}
             </label>
 
             <label className="text-sm">
               Estado
               <select
-                className="w-full border rounded p-2"
+                className={inputCls}
                 value={form.estado}
-                onChange={(e) => setForm({ ...form, estado: e.target.value })}
+                onChange={set("estado")}
               >
+                <option value="pendiente_pago">Pendiente de pago</option>
                 <option value="pagado">Pagado</option>
+                <option value="aprobado">Aprobado</option>
                 <option value="entregado">Entregado</option>
                 <option value="recogido">Recogido</option>
               </select>
+              {errors?.estado && (
+                <p className="text-rose-600 text-xs mt-1">{errors.estado}</p>
+              )}
             </label>
 
             <label className="text-sm">
               Tipo de servicio
+              {/* VALORES EXACTOS del modelo */}
               <select
-                className="w-full border rounded p-2"
+                className={inputCls}
                 value={form.tipo_servicio}
-                onChange={(e) => setForm({ ...form, tipo_servicio: e.target.value })}
+                onChange={set("tipo_servicio")}
               >
-                {TIPO_SERVICIO_OPTS.map((opt) => (
-                  <option key={opt.value} value={opt.value}>{opt.label}</option>
-                ))}
+                <option value="mediodia">Medio día</option>
+                <option value="dia_Completo">Día completo</option>
+                <option value="circuito">Circuito</option>
+                <option value="crucero">Crucero</option>
               </select>
-              <span className="text-xs text-slate-500">
-                Para “Crucero” usa el botón “Nuevo crucero” (tiene su propio formulario).
-              </span>
+              {errors?.tipo_servicio && (
+                <p className="text-rose-600 text-xs mt-1">
+                  {errors.tipo_servicio}
+                </p>
+              )}
             </label>
-
-            <label className="text-sm md:col-span-2">
-              Excursión
-              <input
-                className="w-full border rounded p-2"
-                value={form.excursion}
-                onChange={(e) => setForm({ ...form, excursion: e.target.value })}
-              />
-            </label>
-
-            <label className="text-sm">
-              Lugar de entrega
-              <input
-                className="w-full border rounded p-2"
-                value={form.lugar_entrega}
-                onChange={(e) => setForm({ ...form, lugar_entrega: e.target.value })}
-              />
-            </label>
-
-            <label className="text-sm">
-              Lugar de recogida
-              <input
-                className="w-full border rounded p-2"
-                value={form.lugar_recogida}
-                onChange={(e) => setForm({ ...form, lugar_recogida: e.target.value })}
-              />
-            </label>
-
-            <div className="grid grid-cols-2 gap-2">
-              <label className="text-sm">
-                Inicio (fecha) *
-                <input
-                  type="date"
-                  className="w-full border rounded p-2"
-                  value={form.fecha_inicio_d}
-                  onChange={(e) => setForm({ ...form, fecha_inicio_d: e.target.value })}
-                />
-              </label>
-              <label className="text-sm">
-                Inicio (hora)
-                <input
-                  type="time"
-                  className="w-full border rounded p-2"
-                  value={form.fecha_inicio_t}
-                  onChange={(e) => setForm({ ...form, fecha_inicio_t: e.target.value })}
-                />
-              </label>
-            </div>
-
-            <div className="grid grid-cols-2 gap-2">
-              <label className="text-sm">
-                Fin (fecha)
-                <input
-                  type="date"
-                  className="w-full border rounded p-2"
-                  value={form.fecha_fin_d}
-                  onChange={(e) => setForm({ ...form, fecha_fin_d: e.target.value })}
-                />
-              </label>
-              <label className="text-sm">
-                Fin (hora)
-                <input
-                  type="time"
-                  className="w-full border rounded p-2"
-                  value={form.fecha_fin_t}
-                  onChange={(e) => setForm({ ...form, fecha_fin_t: e.target.value })}
-                />
-              </label>
-            </div>
 
             <label className="text-sm">
               PAX
               <input
                 type="number"
-                min="0"
-                className="w-full border rounded p-2"
+                className={inputCls}
                 value={form.pax}
-                onChange={(e) => setForm({ ...form, pax: e.target.value })}
+                onChange={set("pax")}
+                required
+                inputMode="numeric"
               />
+              {errors?.pax && (
+                <p className="text-rose-600 text-xs mt-1">{errors.pax}</p>
+              )}
             </label>
 
             <label className="text-sm">
               Bono
               <input
-                className="w-full border rounded p-2"
+                className={inputCls}
                 value={form.bono}
-                onChange={(e) => setForm({ ...form, bono: e.target.value })}
+                onChange={set("bono")}
+                autoComplete="off"
               />
+              {errors?.bono && (
+                <p className="text-rose-600 text-xs mt-1">{errors.bono}</p>
+              )}
             </label>
 
             <label className="text-sm">
               Guía
               <input
-                className="w-full border rounded p-2"
+                className={inputCls}
                 value={form.guia}
-                onChange={(e) => setForm({ ...form, guia: e.target.value })}
+                onChange={set("guia")}
+                autoComplete="off"
               />
-            </label>
-
-            <label className="text-sm">
-              Emisores
-              <input
-                className="w-full border rounded p-2"
-                value={form.emisores}
-                onChange={(e) => setForm({ ...form, emisores: e.target.value })}
-              />
+              {errors?.guia && (
+                <p className="text-rose-600 text-xs mt-1">{errors.guia}</p>
+              )}
             </label>
 
             <label className="text-sm md:col-span-2">
               Notas
               <textarea
-                className="w-full border rounded p-2"
-                rows="3"
+                className={`${inputCls} min-h-24`}
+                rows={3}
                 value={form.notas}
-                onChange={(e) => setForm({ ...form, notas: e.target.value })}
+                onChange={set("notas")}
               />
+              {errors?.notas && (
+                <p className="text-rose-600 text-xs mt-1">{errors.notas}</p>
+              )}
+            </label>
+
+            <label className="text-sm">
+              Lugar de entrega
+              <input
+                className={inputCls}
+                value={form.lugar_entrega}
+                onChange={set("lugar_entrega")}
+                autoComplete="off"
+              />
+              {errors?.lugar_entrega && (
+                <p className="text-rose-600 text-xs mt-1">
+                  {errors.lugar_entrega}
+                </p>
+              )}
+            </label>
+
+            <label className="text-sm">
+              Lugar de recogida
+              <input
+                className={inputCls}
+                value={form.lugar_recogida}
+                onChange={set("lugar_recogida")}
+                autoComplete="off"
+              />
+              {errors?.lugar_recogida && (
+                <p className="text-rose-600 text-xs mt-1">
+                  {errors.lugar_recogida}
+                </p>
+              )}
+            </label>
+
+            <label className="text-sm">
+              Emisores (opcional)
+              <input
+                type="number"
+                className={inputCls}
+                value={form.emisores}
+                onChange={set("emisores")}
+                inputMode="numeric"
+              />
+              {errors?.emisores && (
+                <p className="text-rose-600 text-xs mt-1">{errors.emisores}</p>
+              )}
             </label>
           </div>
+        </form>
 
-          <div className="px-4 py-3 border-t flex items-center justify-end gap-2">
-            <button className="px-4 py-2 rounded border" onClick={() => !createMut.isPending && onClose?.()} disabled={createMut.isPending}>Cancelar</button>
-            <button className="px-4 py-2 rounded bg-[#005dab] text-white disabled:opacity-60" onClick={() => createMut.mutate()} disabled={disabled || createMut.isPending}>
+        {/* Footer sticky (botones SIEMPRE visibles) */}
+        <div className="px-4 py-3 border-t bg-white sticky bottom-0 z-10 pb-[env(safe-area-inset-bottom)]">
+          <div className="flex justify-end gap-2">
+            <button
+              type="button"
+              className="px-4 py-3 rounded border text-base"
+              onClick={onClose}
+            >
+              Cancelar
+            </button>
+            <button
+              formAction // no hace falta, pero documenta
+              onClick={(e) => {
+                // dispara el submit del form anterior
+                const formEl = e.currentTarget
+                  .closest("[role='dialog']")
+                  ?.querySelector("form");
+                formEl?.requestSubmit();
+              }}
+              className="px-4 py-3 rounded bg-[#005dab] text-white text-base disabled:opacity-50"
+              disabled={createMut.isPending}
+            >
               {createMut.isPending ? "Creando…" : "Crear pedido"}
             </button>
           </div>
