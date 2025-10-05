@@ -147,6 +147,8 @@ export const opsApi = {
 export const meApi = {
   getMe: () => api.get("me/"),
 };
-
+export const companiesApi = {
+  list: () => api.get("empresas/"),
+};
 export default api;
 export { API_ROOT };
