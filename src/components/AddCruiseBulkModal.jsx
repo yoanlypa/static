@@ -35,16 +35,16 @@ export default function AddCruiseBulkModal({ open, onClose }) {
     terminal: "",
     supplier: "",
     emergency_contact: "",
+    // printing_date — NO se envía; la pone el backend
     estado_pedido: "pagado",
     lugar_entrega: "",
     lugar_recogida: "",
-    emisores: "",       // numérico o vacío
+    emisores: "", // numérico opcional
   });
   const [rows, setRows] = useState([emptyRow()]);
 
-  // Manejo de errores
   const [generalErr, setGeneralErr] = useState("");
-  const [rowErrors, setRowErrors] = useState([]); // array de objetos por fila
+  const [rowErrors, setRowErrors] = useState([]); // errores por fila
   const [showToast, setShowToast] = useState(null); // {kind, msg}
 
   const canSubmit = useMemo(() => {
@@ -58,7 +58,6 @@ export default function AddCruiseBulkModal({ open, onClose }) {
       setGeneralErr("");
       setRowErrors([]);
 
-      // arma meta sin campos vacíos
       const metaPayload = {
         service_date: meta.service_date,
         ship: meta.ship,
@@ -70,13 +69,12 @@ export default function AddCruiseBulkModal({ open, onClose }) {
         estado_pedido: meta.estado_pedido || undefined,
         lugar_entrega: meta.lugar_entrega || undefined,
         lugar_recogida: meta.lugar_recogida || undefined,
+        // printing_date NO se envía
       };
 
-      // emisores: solo si es número válido
+      // emisores: solo si es número
       const emi = (meta.emisores || "").trim();
-      if (/^\d+$/.test(emi)) {
-        metaPayload.emisores = Number(emi);
-      }
+      if (/^\d+$/.test(emi)) metaPayload.emisores = Number(emi);
 
       const rowsPayload = rows.map(r => ({
         sign: (r.sign || "").trim(),
@@ -88,20 +86,18 @@ export default function AddCruiseBulkModal({ open, onClose }) {
 
       return opsApi.postCruiseBulk({ meta: metaPayload, rows: rowsPayload });
     },
-    onSuccess: (res) => {
+    onSuccess: ({ data }) => {
       qc.invalidateQueries({ queryKey: ["ops-orders"] });
-      setShowToast({ kind: "success", msg: "Lote creado correctamente." });
+      const msg = `Lote creado: ${data?.created || 0} cruceros, ${data?.created_pedidos || 0} pedidos.`;
+      setShowToast({ kind: "success", msg });
       onClose?.();
     },
     onError: (err) => {
-      // DRF puede devolver lista de errores por fila o dict de errores
       const data = err?.response?.data;
       if (Array.isArray(data)) {
-        // errores por fila [{field: ["msg"]}, ...]
         setRowErrors(data);
         setShowToast({ kind: "error", msg: "Revisa los campos resaltados." });
       } else if (data && typeof data === "object") {
-        // error general
         setGeneralErr(JSON.stringify(data));
         setShowToast({ kind: "error", msg: "No se pudo crear el lote." });
       } else {
@@ -118,7 +114,6 @@ export default function AddCruiseBulkModal({ open, onClose }) {
   };
   const updateRow = (idx, patch) => {
     setRows((rs) => rs.map((r, i) => (i === idx ? { ...r, ...patch } : r)));
-    // limpia errores de esa celda si existían
     setRowErrors((es) => {
       const copy = [...es];
       copy[idx] = { ...(copy[idx] || {}), ...Object.fromEntries(Object.keys(patch).map(k => [k, undefined])) };
@@ -130,7 +125,10 @@ export default function AddCruiseBulkModal({ open, onClose }) {
 
   return (
     <div className="fixed inset-0 z-50">
-      <div className="absolute inset-0 bg-black/40" onClick={() => !mut.isPending && onClose?.()} />
+      <div
+        className="absolute inset-0 bg-black/40"
+        onClick={() => !mut.isPending && onClose?.()}
+      />
       <div className="absolute inset-0 flex items-center justify-center p-4">
         <div className="w-full max-w-5xl bg-white rounded-xl shadow-xl">
           <div className="px-4 py-3 border-b">
@@ -143,10 +141,10 @@ export default function AddCruiseBulkModal({ open, onClose }) {
             </div>
           )}
 
-          {/* META */}
+          {/* META (sin printing_date) */}
           <div className="p-4 grid grid-cols-1 md:grid-cols-3 gap-3">
             <label className="text-sm">
-              Empresa ID 
+              Empresa ID * (creará Pedidos)
               <input
                 className="w-full border rounded p-2"
                 value={meta.empresa_id}
@@ -209,10 +207,6 @@ export default function AddCruiseBulkModal({ open, onClose }) {
                 onChange={(e) => setMeta({ ...meta, emergency_contact: e.target.value })}
               />
             </label>
-              <span className="text-xs text-slate-500">
-                (Opcional; si la dejas vacía no se enviará)
-              </span>
-            </label>
             <label className="text-sm">
               Estado de los Pedidos
               <select
@@ -225,6 +219,32 @@ export default function AddCruiseBulkModal({ open, onClose }) {
                 <option value="recogido">Recogido</option>
                 <option value="pendiente_pago">Pendiente pago</option>
               </select>
+            </label>
+            <label className="text-sm">
+              Emisores (ID numérico)
+              <input
+                className="w-full border rounded p-2"
+                value={meta.emisores}
+                onChange={(e) => setMeta({ ...meta, emisores: e.target.value })}
+                placeholder="Ej: 12"
+              />
+            </label>
+
+            <label className="text-sm md:col-span-3">
+              Lugar de entrega (común)
+              <input
+                className="w-full border rounded p-2"
+                value={meta.lugar_entrega}
+                onChange={(e) => setMeta({ ...meta, lugar_entrega: e.target.value })}
+              />
+            </label>
+            <label className="text-sm md:col-span-3">
+              Lugar de recogida (común)
+              <input
+                className="w-full border rounded p-2"
+                value={meta.lugar_recogida}
+                onChange={(e) => setMeta({ ...meta, lugar_recogida: e.target.value })}
+              />
             </label>
           </div>
 
@@ -293,11 +313,10 @@ export default function AddCruiseBulkModal({ open, onClose }) {
                             onChange={(e) => updateRow(idx, { arrival_time: e.target.value })}
                           />
                           {err.arrival_time && <div className="text-xs text-red-600 mt-1">{errText("arrival_time")}</div>}
-                          {/* Si el backend devuelve error de printing_date como fila, muéstralo aquí también */}
-                          {err.printing_date && <div className="text-xs text-red-600 mt-1">{errText("printing_date")}</div>}
                         </td>
                         <td className="p-2">
                           <button
+                            type="button"
                             className="px-2 py-1 text-xs rounded border hover:bg-slate-50"
                             onClick={() => removeRow(idx)}
                           >
@@ -312,13 +331,31 @@ export default function AddCruiseBulkModal({ open, onClose }) {
             </div>
 
             <div className="mt-3 flex gap-2">
-              <button className="px-3 py-2 rounded border" onClick={addRow}>Añadir excursión</button>
+              <button
+                type="button"
+                className="px-3 py-2 rounded border"
+                onClick={addRow}
+              >
+                Añadir excursión
+              </button>
             </div>
           </div>
 
           <div className="px-4 py-3 border-t flex items-center justify-end gap-2">
-            <button className="px-4 py-2 rounded border" onClick={() => !mut.isPending && onClose?.()} disabled={mut.isPending}>Cancelar</button>
-            <button className="px-4 py-2 rounded bg-[#005dab] text-white disabled:opacity-60" onClick={() => mut.mutate()} disabled={!canSubmit || mut.isPending}>
+            <button
+              type="button"
+              className="px-4 py-2 rounded border"
+              onClick={() => !mut.isPending && onClose?.()}
+              disabled={mut.isPending}
+            >
+              Cancelar
+            </button>
+            <button
+              type="button"
+              className="px-4 py-2 rounded bg-[#005dab] text-white disabled:opacity-60"
+              onClick={() => mut.mutate()}
+              disabled={!canSubmit || mut.isPending}
+            >
               {mut.isPending ? "Creando…" : "Crear lote"}
             </button>
           </div>
