@@ -5,6 +5,15 @@ import { opsApi, meApi, companiesApi } from "../services/api";
 import { parseDRFError } from "../utils/drfErrors";
 
 export default function AddOrderModal({ open, onClose, onCreated }) {
+  const { isAuthenticated } = useAuth();
+  const empresasQ = useQuery({
+    queryKey: ["empresas"],
+    queryFn: async () => {
+      const { data } = await opsApi.listCompanies(); // tu función real
+      return data;
+    },
+    enabled: isAuthenticated,   // <— clave
+  });
   const [form, setForm] = useState({
     empresa: "",                 // ID numérico (se fija solo si no-staff)
     excursion: "",
