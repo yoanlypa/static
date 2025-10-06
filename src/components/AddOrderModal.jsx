@@ -48,7 +48,7 @@ export default function AddOrderModal({ open, onClose, onCreated }) {
   const myEmpresaName = meQ.data?.empresa_name || "";
 
   // --- listado de empresas (solo staff) ---
-  const empresasQ = useQuery({
+  const empresasStaffQ = useQuery({
     queryKey: ["empresas"],
     queryFn: async () => (await companiesApi.list()).data,
     enabled: open && isStaff,
@@ -190,9 +190,9 @@ export default function AddOrderModal({ open, onClose, onCreated }) {
                   required
                 >
                   <option value="">
-                    {empresasQ.isLoading ? "Cargando empresas…" : "Selecciona empresa…"}
+                    {empresasStaffQ.isLoading ? "Cargando empresas…" : "Selecciona empresa…"}
                   </option>
-                  {(empresasQ.data || []).map((e) => (
+                  {(empresasStaffQ.data || []).map((e) => (
                     <option key={e.id} value={e.id}>
                       {e.nombre}
                     </option>
