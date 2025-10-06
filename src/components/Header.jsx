@@ -1,4 +1,4 @@
-// src/components/Navbar.jsx
+// src/components/Header.jsx
 import { useState } from "react";
 import { Link, NavLink } from "react-router-dom";
 import { useAuth } from "../hooks/useAuth";
@@ -20,7 +20,7 @@ function NavItem({ to, children, onClick }) {
   );
 }
 
-export default function Navbar() {
+export default function Header() {
   const [open, setOpen] = useState(false);
   const { isAuthenticated, logout } = useAuth();
   const { isLoading, isStaff, me } = useStaff();
@@ -36,16 +36,15 @@ export default function Navbar() {
             <span className="text-xl">Innovations Tours</span>
           </Link>
 
-          {/* Desktop menu */}
+          {/* Menú desktop */}
           <div className="hidden md:flex items-center gap-1">
             <NavItem to="/">Inicio</NavItem>
             <NavItem to="/cruceros">Cruceros</NavItem>
-
-            {/* SOLO STAFF → Operaciones */}
+            {/* Solo STAFF → Operaciones */}
             {!isLoading && isStaff && <NavItem to="/ops">Operaciones</NavItem>}
           </div>
 
-          {/* Right side */}
+          {/* Lado derecho (desktop) */}
           <div className="hidden md:flex items-center gap-3">
             {isAuthenticated ? (
               <>
@@ -69,7 +68,7 @@ export default function Navbar() {
             )}
           </div>
 
-          {/* Mobile burger */}
+          {/* Burger móvil */}
           <button
             className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded hover:bg-slate-100"
             onClick={() => setOpen((v) => !v)}
@@ -81,13 +80,12 @@ export default function Navbar() {
           </button>
         </div>
 
-        {/* Mobile menu */}
+        {/* Menú móvil */}
         {open && (
           <div className="md:hidden border-t pb-2">
             <div className="flex flex-col pt-2">
               <NavItem to="/" onClick={close}>Inicio</NavItem>
               <NavItem to="/cruceros" onClick={close}>Cruceros</NavItem>
-              {/* SOLO STAFF → Operaciones */}
               {!isLoading && isStaff && <NavItem to="/ops" onClick={close}>Operaciones</NavItem>}
             </div>
 
