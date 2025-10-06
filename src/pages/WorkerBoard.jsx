@@ -1,33 +1,37 @@
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { opsApi } from "../services/api";
-import AddOrderModal from "../components/AddOrderModal";
+import DeliverModal from "../components/DeliverModal";
+import AddOrderModal from "../components/AddOrderModal"; // ⬅️ NUEVO
 import { toCsv, downloadCsv } from "../utils/csv";
 
 function toISODate(d) {
   const pad = (n) => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth()+1)}-${pad(d.getDate())}`;
+  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
 function rangeToday() {
   const d = new Date();
   return { s: `${toISODate(d)}T00:00:00Z`, e: `${toISODate(d)}T23:59:59Z` };
 }
 function rangeTomorrow() {
-  const d = new Date(); d.setDate(d.getDate()+1);
+  const d = new Date();
+  d.setDate(d.getDate() + 1);
   return { s: `${toISODate(d)}T00:00:00Z`, e: `${toISODate(d)}T23:59:59Z` };
 }
 function rangeWeek() {
   const d = new Date();
   const day = d.getDay(); // 0=Dom
-  const diffToMon = (day === 0 ? -6 : 1 - day);
-  const start = new Date(d); start.setDate(d.getDate() + diffToMon);
-  const end = new Date(start); end.setDate(start.getDate() + 6);
+  const diffToMon = day === 0 ? -6 : 1 - day;
+  const start = new Date(d);
+  start.setDate(d.getDate() + diffToMon);
+  const end = new Date(start);
+  end.setDate(start.getDate() + 6);
   return { s: `${toISODate(start)}T00:00:00Z`, e: `${toISODate(end)}T23:59:59Z` };
 }
 function rangeMonth() {
   const d = new Date();
   const start = new Date(d.getFullYear(), d.getMonth(), 1);
-  const end = new Date(d.getFullYear(), d.getMonth()+1, 0);
+  const end = new Date(d.getFullYear(), d.getMonth() + 1, 0);
   return { s: `${toISODate(start)}T00:00:00Z`, e: `${toISODate(end)}T23:59:59Z` };
 }
 
@@ -42,7 +46,8 @@ const badgeCls = {
 function isOverdue(o) {
   if (!o?.fecha_inicio) return false;
   const d = new Date(o.fecha_inicio);
-  const today = new Date(); today.setHours(0,0,0,0);
+  const today = new Date();
+  today.setHours(0, 0, 0, 0);
   return d < today && o.estado !== "entregado" && o.estado !== "recogido";
 }
 
@@ -59,7 +64,8 @@ function SkeletonCard() {
 export default function WorkerBoard() {
   // rango por defecto: hoy → +14
   const today = new Date();
-  const in14 = new Date(); in14.setDate(in14.getDate() + 14);
+  const in14 = new Date();
+  in14.setDate(in14.getDate() + 14);
 
   const [filters, setFilters] = useState({
     status: "",
@@ -69,17 +75,21 @@ export default function WorkerBoard() {
     search: "",
   });
 
-  const [sortDir, setSortDir] = useState("asc");    // asc|desc por fecha_inicio
-  const [compact, setCompact] = useState(false);    // vista compacta
+  const [sortDir, setSortDir] = useState("asc"); // asc|desc por fecha_inicio
+  const [compact, setCompact] = useState(false); // vista compacta
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [selected, setSelected] = useState(null);
+
+  // ⬇️ NUEVO: estado para abrir/cerrar el modal de creación
+  const [addOpen, setAddOpen] = useState(false);
+
   const qc = useQueryClient();
 
   const { data, isLoading, isError, error } = useQuery({
     queryKey: ["ops-orders", filters],
     queryFn: async () => {
       const { data } = await opsApi.listOpsOrders(filters);
-      return Array.isArray(data) ? data : (data.results || []);
+      return Array.isArray(data) ? data : data.results || [];
     },
     refetchOnWindowFocus: false,
   });
@@ -102,7 +112,7 @@ export default function WorkerBoard() {
     });
     const byDate = {};
     for (const o of arr) {
-      const key = (o.fecha_inicio || "—").slice(0,10);
+      const key = (o.fecha_inicio || "—").slice(0, 10);
       byDate[key] ??= [];
       byDate[key].push(o);
     }
@@ -112,7 +122,7 @@ export default function WorkerBoard() {
   const dateKeys = useMemo(() => Object.keys(grouped), [grouped]);
 
   function exportCurrentCsv() {
-    const rows = (data || []);
+    const rows = data || [];
     const headers = [
       { label: "ID", get: (r) => r.id },
       { label: "Empresa", get: (r) => r.empresa },
@@ -143,28 +153,36 @@ export default function WorkerBoard() {
               const { s, e } = rangeToday();
               setFilters((f) => ({ ...f, date_from: s, date_to: e }));
             }}
-          >Hoy</button>
+          >
+            Hoy
+          </button>
           <button
             className="px-3 py-1.5 rounded border text-sm"
             onClick={() => {
               const { s, e } = rangeTomorrow();
               setFilters((f) => ({ ...f, date_from: s, date_to: e }));
             }}
-          >Mañana</button>
+          >
+            Mañana
+          </button>
           <button
             className="px-3 py-1.5 rounded border text-sm"
             onClick={() => {
               const { s, e } = rangeWeek();
               setFilters((f) => ({ ...f, date_from: s, date_to: e }));
             }}
-          >Esta semana</button>
+          >
+            Esta semana
+          </button>
           <button
             className="px-3 py-1.5 rounded border text-sm"
             onClick={() => {
               const { s, e } = rangeMonth();
               setFilters((f) => ({ ...f, date_from: s, date_to: e }));
             }}
-          >Este mes</button>
+          >
+            Este mes
+          </button>
 
           <button
             className="px-3 py-1.5 rounded border text-sm"
@@ -178,11 +196,15 @@ export default function WorkerBoard() {
             <button
               className={`px-2.5 py-1 text-xs ${sortDir === "asc" ? "bg-[#005dab] text-white" : "bg-white"}`}
               onClick={() => setSortDir("asc")}
-            >Fecha ↑</button>
+            >
+              Fecha ↑
+            </button>
             <button
               className={`px-2.5 py-1 text-xs border-l ${sortDir === "desc" ? "bg-[#005dab] text-white" : "bg-white"}`}
               onClick={() => setSortDir("desc")}
-            >Fecha ↓</button>
+            >
+              Fecha ↓
+            </button>
           </div>
 
           <label className="flex items-center gap-2 text-sm ml-2">
@@ -265,7 +287,9 @@ export default function WorkerBoard() {
 
       {isLoading && (
         <div className="grid gap-3">
-          {Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}
+          {Array.from({ length: 5 }).map((_, i) => (
+            <SkeletonCard key={i} />
+          ))}
         </div>
       )}
       {isError && <pre className="text-red-600">{String(error)}</pre>}
@@ -289,9 +313,7 @@ export default function WorkerBoard() {
                       </div>
                       <div className="flex items-center gap-2">
                         {overdue && (
-                          <span className="text-xs px-2 py-1 rounded bg-rose-100 text-rose-700">
-                            Atrasado
-                          </span>
+                          <span className="text-xs px-2 py-1 rounded bg-rose-100 text-rose-700">Atrasado</span>
                         )}
                         <span className={`text-xs px-2 py-1 rounded ${badgeCls[o.estado] || "bg-slate-100 text-slate-800"}`}>
                           {o.estado}
@@ -301,9 +323,15 @@ export default function WorkerBoard() {
 
                     {!compact && (
                       <div className="text-sm text-slate-600 mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                        <span>{o.lugar_entrega || "—"} → {o.lugar_recogida || "—"}</span>
+                        <span>
+                          {o.lugar_entrega || "—"} → {o.lugar_recogida || "—"}
+                        </span>
                         <span>{o.pax ? `${o.pax} pax` : "—"}</span>
-                        {o.bono && <span>Bono: <code className="px-1 bg-slate-100 rounded">{o.bono}</code></span>}
+                        {o.bono && (
+                          <span>
+                            Bono: <code className="px-1 bg-slate-100 rounded">{o.bono}</code>
+                          </span>
+                        )}
                         {o.guia && <span>Guía: {o.guia}</span>}
                         {o.tipo_servicio && <span>Tipo: {o.tipo_servicio}</span>}
                       </div>
@@ -313,7 +341,10 @@ export default function WorkerBoard() {
                       <button
                         className="px-3 py-1 rounded bg-emerald-600 text-white disabled:opacity-50"
                         disabled={o.estado === "entregado" || deliveredMut.isPending}
-                        onClick={() => { setSelected(o); setDeliverOpen(true); }}
+                        onClick={() => {
+                          setSelected(o);
+                          setDeliverOpen(true);
+                        }}
                       >
                         Marcar entregado
                       </button>
@@ -333,25 +364,45 @@ export default function WorkerBoard() {
         ))}
       </div>
 
-      {(!isLoading && dateKeys.length === 0) && (
+      {!isLoading && dateKeys.length === 0 && (
         <div className="text-slate-500 mt-6">No hay pedidos para este rango.</div>
       )}
 
-     <button
+      {/* Modal de entregar */}
+      <DeliverModal
+        open={deliverOpen}
+        onClose={() => setDeliverOpen(false)}
+        pedido={selected}
+        onConfirm={(body) => {
+          if (!selected) return;
+          deliveredMut.mutate(
+            { id: selected.id, body },
+            {
+              onSuccess: () => {
+                setDeliverOpen(false);
+                setSelected(null);
+              },
+            }
+          );
+        }}
+      />
+
+      {/* ⬇️ NUEVO: Botón flotante + y modal de crear pedido */}
+      <button
         type="button"
+        onClick={() => setAddOpen(true)}
+        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#005dab] text-white text-3xl leading-none shadow-lg flex items-center justify-center hover:opacity-90"
         aria-label="Crear pedido"
-        className="fixed bottom-5 right-5 sm:bottom-6 sm:right-6 w-14 h-14 rounded-full bg-[#005dab] text-white text-3xl shadow-lg flex items-center justify-center hover:opacity-90 focus:outline-none focus:ring-4 focus:ring-blue-300"
-        onClick={() => setOpenAdd(true)}
+        title="Crear pedido"
       >
         +
       </button>
 
-      {/* Modal crear pedido */}
       <AddOrderModal
-        open={openAdd}
-        onClose={() => setOpenAdd(false)}
+        open={addOpen}
+        onClose={() => setAddOpen(false)}
         onCreated={() => {
-          setOpenAdd(false);
+          setAddOpen(false);
           qc.invalidateQueries({ queryKey: ["ops-orders"] });
         }}
       />
