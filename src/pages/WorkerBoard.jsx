@@ -2,7 +2,9 @@ import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { opsApi } from "../services/api";
 import DeliverModal from "../components/DeliverModal";
-import AddOrderModal from "../components/AddOrderModal"; // ⬅️ NUEVO
+import AddOrderModal from "../components/AddOrderModal";
+import AddCruiseBulkModal from "../components/AddCruiseBulkModal"; // ⬅️ asegúrate de tenerlo
+import ReminderModal from "../components/ReminderModal";           // ⬅️ nuevo
 import { toCsv, downloadCsv } from "../utils/csv";
 
 function toISODate(d) {
@@ -62,7 +64,6 @@ function SkeletonCard() {
 }
 
 export default function WorkerBoard() {
-  // rango por defecto: hoy → +14
   const today = new Date();
   const in14 = new Date();
   in14.setDate(in14.getDate() + 14);
@@ -75,13 +76,18 @@ export default function WorkerBoard() {
     search: "",
   });
 
-  const [sortDir, setSortDir] = useState("asc"); // asc|desc por fecha_inicio
-  const [compact, setCompact] = useState(false); // vista compacta
+  const [sortDir, setSortDir] = useState("asc");
+  const [compact, setCompact] = useState(false);
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
-  // ⬇️ NUEVO: estado para abrir/cerrar el modal de creación
-  const [addOpen, setAddOpen] = useState(false);
+  // ⬇️ estados de modales
+  const [addStdOpen, setAddStdOpen] = useState(false);
+  const [addCruiseOpen, setAddCruiseOpen] = useState(false);
+  const [reminderOpen, setReminderOpen] = useState(false);
+
+  // ⬇️ estado del menú flotante
+  const [speedDialOpen, setSpeedDialOpen] = useState(false);
 
   const qc = useQueryClient();
 
@@ -103,7 +109,6 @@ export default function WorkerBoard() {
     onSuccess: () => qc.invalidateQueries({ queryKey: ["ops-orders"] }),
   });
 
-  // Ordenar & agrupar por fecha_inicio (YYYY-MM-DD)
   const grouped = useMemo(() => {
     const arr = (data || []).slice().sort((a, b) => {
       const da = a.fecha_inicio || "";
@@ -387,25 +392,72 @@ export default function WorkerBoard() {
         }}
       />
 
-      {/* ⬇️ NUEVO: Botón flotante + y modal de crear pedido */}
-      <button
-        type="button"
-        onClick={() => setAddOpen(true)}
-        className="fixed bottom-6 right-6 h-14 w-14 rounded-full bg-[#005dab] text-white text-3xl leading-none shadow-lg flex items-center justify-center hover:opacity-90"
-        aria-label="Crear pedido"
-        title="Crear pedido"
-      >
-        +
-      </button>
+      {/* ======= SPEED DIAL (botón + con 3 acciones) ======= */}
+      <div className="fixed bottom-6 right-6 z-40">
+        {/* acciones */}
+        {speedDialOpen && (
+          <div className="mb-3 flex flex-col items-end gap-2">
+            <button
+              onClick={() => {
+                setAddStdOpen(true);
+                setSpeedDialOpen(false);
+              }}
+              className="px-3 py-2 rounded shadow bg-white border text-sm hover:bg-slate-50"
+            >
+              ➕ Pedido estándar
+            </button>
+            <button
+              onClick={() => {
+                setAddCruiseOpen(true);
+                setSpeedDialOpen(false);
+              }}
+              className="px-3 py-2 rounded shadow bg-white border text-sm hover:bg-slate-50"
+            >
+              🚢 Pedido de crucero
+            </button>
+            <button
+              onClick={() => {
+                setReminderOpen(true);
+                setSpeedDialOpen(false);
+              }}
+              className="px-3 py-2 rounded shadow bg-white border text-sm hover:bg-slate-50"
+            >
+              ⏰ Recordatorio
+            </button>
+          </div>
+        )}
 
+        {/* botón principal */}
+        <button
+          type="button"
+          onClick={() => setSpeedDialOpen((v) => !v)}
+          className="h-14 w-14 rounded-full bg-[#005dab] text-white text-3xl leading-none shadow-lg flex items-center justify-center hover:opacity-90"
+          aria-label="Acciones"
+          title="Acciones"
+        >
+          {speedDialOpen ? "×" : "+"}
+        </button>
+      </div>
+
+      {/* Modales de creación */}
       <AddOrderModal
-        open={addOpen}
-        onClose={() => setAddOpen(false)}
+        open={addStdOpen}
+        onClose={() => setAddStdOpen(false)}
         onCreated={() => {
-          setAddOpen(false);
+          setAddStdOpen(false);
           qc.invalidateQueries({ queryKey: ["ops-orders"] });
         }}
       />
+      <AddCruiseBulkModal
+        open={addCruiseOpen}
+        onClose={() => setAddCruiseOpen(false)}
+        onCreated={() => {
+          setAddCruiseOpen(false);
+          // si al crear cruceros también se crean pedidos, refrescamos
+          qc.invalidateQueries({ queryKey: ["ops-orders"] });
+        }}
+      />
+      <ReminderModal open={reminderOpen} onClose={() => setReminderOpen(false)} />
     </div>
   );
 }
