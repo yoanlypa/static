@@ -11,6 +11,7 @@ import Login from "./pages/Login";
 import PedidosList from "./pages/PedidosList";
 import Cruceros from "./pages/Cruceros";
 import MisPedidos from "./pages/MisPedidos";
+import Reminders from "./pages/Reminders";
 import "./App.css";
 import WorkerBoard from "./pages/WorkerBoard";
 import StaffRoute from "./routes/StaffRoute";
@@ -35,6 +36,7 @@ export default function App() {
             <Route path="/mis-pedidos" element={<MisPedidos />} />
             <Route path="/cruceros"   element={<Cruceros />} />
             <Route path="/ops"element = { <StaffRoute> <WorkerBoard /> </StaffRoute> } />
+            <Route path="/reminders" element={<Reminders />} />
           </Routes>
         </QueryClientProvider>
       </AuthProvider>
