@@ -142,6 +142,12 @@ export const opsApi = {
   createOrder: (payload) => api.post("ops/pedidos/", payload),
   postCruiseBulk: (rows) => api.post("pedidos/cruceros/bulk/", rows),
 };
+export const remindersApi = {
+  list: (params) => api.get("reminders/", { params }),
+  create: (payload) => api.post("reminders/", payload),
+  update: (id, payload) => api.patch(`reminders/${id}/`, payload),
+  remove: (id) => api.delete(`reminders/${id}/`),
+};
 
 export const meApi = {
   getMe: () => api.get("me/"),

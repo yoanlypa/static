@@ -1,10 +1,13 @@
-// src/utils/drfErrors.js
 export function parseDRFError(err) {
-  const data = err?.response?.data;
-  if (!data || typeof data !== "object") return { _error: "Error inesperado" };
-  const out = {};
+  const res = err?.response;
+  if (!res) return { detail: "Error de red" };
+  const data = res.data || {};
+  if (typeof data === "string") return { detail: data };
+  const flat = {};
   for (const [k, v] of Object.entries(data)) {
-    out[k] = Array.isArray(v) ? v.join(" ") : String(v);
+    if (Array.isArray(v)) flat[k] = v.join(" ");
+    else if (typeof v === "string") flat[k] = v;
+    else flat[k] = JSON.stringify(v);
   }
-  return out;
+  return flat;
 }

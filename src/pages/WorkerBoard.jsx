@@ -1,33 +1,25 @@
+// src/pages/WorkerBoard.jsx
 import { useMemo, useState } from "react";
 import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query";
 import { opsApi } from "../services/api";
 import DeliverModal from "../components/DeliverModal";
 import AddOrderModal from "../components/AddOrderModal";
-import AddCruiseBulkModal from "../components/AddCruiseBulkModal"; // ⬅️ asegúrate de tenerlo
-import ReminderModal from "../components/ReminderModal";           // ⬅️ nuevo
+import AddCruiseBulkModal from "../components/AddCruiseBulkModal";
+import ReminderModal from "../components/ReminderModal";
 import { toCsv, downloadCsv } from "../utils/csv";
 
 function toISODate(d) {
   const pad = (n) => String(n).padStart(2, "0");
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
 }
-function rangeToday() {
-  const d = new Date();
-  return { s: `${toISODate(d)}T00:00:00Z`, e: `${toISODate(d)}T23:59:59Z` };
-}
-function rangeTomorrow() {
-  const d = new Date();
-  d.setDate(d.getDate() + 1);
-  return { s: `${toISODate(d)}T00:00:00Z`, e: `${toISODate(d)}T23:59:59Z` };
-}
+function rangeToday() { const d = new Date(); return { s: `${toISODate(d)}T00:00:00Z`, e: `${toISODate(d)}T23:59:59Z` }; }
+function rangeTomorrow() { const d = new Date(); d.setDate(d.getDate() + 1); return { s: `${toISODate(d)}T00:00:00Z`, e: `${toISODate(d)}T23:59:59Z` }; }
 function rangeWeek() {
   const d = new Date();
   const day = d.getDay(); // 0=Dom
   const diffToMon = day === 0 ? -6 : 1 - day;
-  const start = new Date(d);
-  start.setDate(d.getDate() + diffToMon);
-  const end = new Date(start);
-  end.setDate(start.getDate() + 6);
+  const start = new Date(d); start.setDate(d.getDate() + diffToMon);
+  const end = new Date(start); end.setDate(start.getDate() + 6);
   return { s: `${toISODate(start)}T00:00:00Z`, e: `${toISODate(end)}T23:59:59Z` };
 }
 function rangeMonth() {
@@ -48,8 +40,7 @@ const badgeCls = {
 function isOverdue(o) {
   if (!o?.fecha_inicio) return false;
   const d = new Date(o.fecha_inicio);
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  const today = new Date(); today.setHours(0, 0, 0, 0);
   return d < today && o.estado !== "entregado" && o.estado !== "recogido";
 }
 
@@ -65,8 +56,7 @@ function SkeletonCard() {
 
 export default function WorkerBoard() {
   const today = new Date();
-  const in14 = new Date();
-  in14.setDate(in14.getDate() + 14);
+  const in14 = new Date(); in14.setDate(in14.getDate() + 14);
 
   const [filters, setFilters] = useState({
     status: "",
@@ -81,12 +71,12 @@ export default function WorkerBoard() {
   const [deliverOpen, setDeliverOpen] = useState(false);
   const [selected, setSelected] = useState(null);
 
-  // ⬇️ estados de modales
+  // modales que ya usas
   const [addStdOpen, setAddStdOpen] = useState(false);
   const [addCruiseOpen, setAddCruiseOpen] = useState(false);
   const [reminderOpen, setReminderOpen] = useState(false);
 
-  // ⬇️ estado del menú flotante
+  // tu speed-dial/ícono flotante existente
   const [speedDialOpen, setSpeedDialOpen] = useState(false);
 
   const qc = useQueryClient();
@@ -152,73 +142,20 @@ export default function WorkerBoard() {
       <div className="flex items-center justify-between flex-wrap gap-3 mb-3">
         <h1 className="text-2xl font-bold">Operaciones · Pedidos</h1>
         <div className="flex flex-wrap gap-2">
-          <button
-            className="px-3 py-1.5 rounded border text-sm"
-            onClick={() => {
-              const { s, e } = rangeToday();
-              setFilters((f) => ({ ...f, date_from: s, date_to: e }));
-            }}
-          >
-            Hoy
-          </button>
-          <button
-            className="px-3 py-1.5 rounded border text-sm"
-            onClick={() => {
-              const { s, e } = rangeTomorrow();
-              setFilters((f) => ({ ...f, date_from: s, date_to: e }));
-            }}
-          >
-            Mañana
-          </button>
-          <button
-            className="px-3 py-1.5 rounded border text-sm"
-            onClick={() => {
-              const { s, e } = rangeWeek();
-              setFilters((f) => ({ ...f, date_from: s, date_to: e }));
-            }}
-          >
-            Esta semana
-          </button>
-          <button
-            className="px-3 py-1.5 rounded border text-sm"
-            onClick={() => {
-              const { s, e } = rangeMonth();
-              setFilters((f) => ({ ...f, date_from: s, date_to: e }));
-            }}
-          >
-            Este mes
-          </button>
+          <button className="px-3 py-1.5 rounded border text-sm" onClick={() => { const { s, e } = rangeToday(); setFilters((f) => ({ ...f, date_from: s, date_to: e })); }}>Hoy</button>
+          <button className="px-3 py-1.5 rounded border text-sm" onClick={() => { const { s, e } = rangeTomorrow(); setFilters((f) => ({ ...f, date_from: s, date_to: e })); }}>Mañana</button>
+          <button className="px-3 py-1.5 rounded border text-sm" onClick={() => { const { s, e } = rangeWeek(); setFilters((f) => ({ ...f, date_from: s, date_to: e })); }}>Esta semana</button>
+          <button className="px-3 py-1.5 rounded border text-sm" onClick={() => { const { s, e } = rangeMonth(); setFilters((f) => ({ ...f, date_from: s, date_to: e })); }}>Este mes</button>
 
-          <button
-            className="px-3 py-1.5 rounded border text-sm"
-            onClick={exportCurrentCsv}
-            title="Exportar CSV de lo filtrado"
-          >
-            Exportar CSV
-          </button>
+          <button className="px-3 py-1.5 rounded border text-sm" onClick={exportCurrentCsv} title="Exportar CSV de lo filtrado">Exportar CSV</button>
 
           <div className="ml-2 inline-flex overflow-hidden rounded border">
-            <button
-              className={`px-2.5 py-1 text-xs ${sortDir === "asc" ? "bg-[#005dab] text-white" : "bg-white"}`}
-              onClick={() => setSortDir("asc")}
-            >
-              Fecha ↑
-            </button>
-            <button
-              className={`px-2.5 py-1 text-xs border-l ${sortDir === "desc" ? "bg-[#005dab] text-white" : "bg-white"}`}
-              onClick={() => setSortDir("desc")}
-            >
-              Fecha ↓
-            </button>
+            <button className={`px-2.5 py-1 text-xs ${sortDir === "asc" ? "bg-[#005dab] text-white" : "bg-white"}`} onClick={() => setSortDir("asc")}>Fecha ↑</button>
+            <button className={`px-2.5 py-1 text-xs border-l ${sortDir === "desc" ? "bg-[#005dab] text-white" : "bg-white"}`} onClick={() => setSortDir("desc")}>Fecha ↓</button>
           </div>
 
           <label className="flex items-center gap-2 text-sm ml-2">
-            <input
-              type="checkbox"
-              className="h-4 w-4"
-              checked={compact}
-              onChange={(e) => setCompact(e.target.checked)}
-            />
+            <input type="checkbox" className="h-4 w-4" checked={compact} onChange={(e) => setCompact(e.target.checked)} />
             Vista compacta
           </label>
         </div>
@@ -229,48 +166,19 @@ export default function WorkerBoard() {
         <div className="grid md:grid-cols-5 gap-3 mb-3">
           <label className="text-sm">
             Estado
-            <input
-              className="w-full border rounded p-2"
-              placeholder="pagado,entregado,recogido"
-              value={filters.status}
-              onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))}
-            />
+            <input className="w-full border rounded p-2" placeholder="pagado,entregado,recogido" value={filters.status} onChange={(e) => setFilters((f) => ({ ...f, status: e.target.value }))} />
           </label>
           <label className="text-sm">
             Desde
-            <input
-              type="date"
-              className="w-full border rounded p-2"
-              value={filters.date_from?.slice(0, 10) || ""}
-              onChange={(e) =>
-                setFilters((f) => ({
-                  ...f,
-                  date_from: e.target.value ? `${e.target.value}T00:00:00Z` : "",
-                }))
-              }
-            />
+            <input type="date" className="w-full border rounded p-2" value={filters.date_from?.slice(0, 10) || ""} onChange={(e) => setFilters((f) => ({ ...f, date_from: e.target.value ? `${e.target.value}T00:00:00Z` : "" }))} />
           </label>
           <label className="text-sm">
             Hasta
-            <input
-              type="date"
-              className="w-full border rounded p-2"
-              value={filters.date_to?.slice(0, 10) || ""}
-              onChange={(e) =>
-                setFilters((f) => ({
-                  ...f,
-                  date_to: e.target.value ? `${e.target.value}T23:59:59Z` : "",
-                }))
-              }
-            />
+            <input type="date" className="w-full border rounded p-2" value={filters.date_to?.slice(0, 10) || ""} onChange={(e) => setFilters((f) => ({ ...f, date_to: e.target.value ? `${e.target.value}T23:59:59Z` : "" }))} />
           </label>
           <label className="text-sm">
             Tipo servicio
-            <select
-              className="w-full border rounded p-2"
-              value={filters.tipo_servicio}
-              onChange={(e) => setFilters((f) => ({ ...f, tipo_servicio: e.target.value }))}
-            >
+            <select className="w-full border rounded p-2" value={filters.tipo_servicio} onChange={(e) => setFilters((f) => ({ ...f, tipo_servicio: e.target.value }))}>
               <option value="">Todos</option>
               <option value="mediodia">Medio día</option>
               <option value="dia_Completo">Día completo</option>
@@ -280,30 +188,20 @@ export default function WorkerBoard() {
           </label>
           <label className="text-sm">
             Buscar
-            <input
-              className="w-full border rounded p-2"
-              placeholder="empresa / excursión / bono / guía…"
-              value={filters.search}
-              onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))}
-            />
+            <input className="w-full border rounded p-2" placeholder="empresa / excursión / bono / guía…" value={filters.search} onChange={(e) => setFilters((f) => ({ ...f, search: e.target.value }))} />
           </label>
         </div>
       </div>
 
-      {isLoading && (
-        <div className="grid gap-3">
-          {Array.from({ length: 5 }).map((_, i) => (
-            <SkeletonCard key={i} />
-          ))}
-        </div>
-      )}
+      {isLoading && <div className="grid gap-3">{Array.from({ length: 5 }).map((_, i) => <SkeletonCard key={i} />)}</div>}
       {isError && <pre className="text-red-600">{String(error)}</pre>}
 
       {/* AGRUPADO POR FECHA */}
       <div className="space-y-4">
         {dateKeys.map((dateKey) => (
           <section key={dateKey} className="rounded-xl overflow-hidden border">
-            <div className="bg-sky-600 text-white px-4 py-2 sticky top-[56px]">
+            {/* 👇 ÚNICO CAMBIO IMPORTANTE AQUÍ: top-[36px] */}
+            <div className="bg-sky-600 text-white px-4 py-2 sticky top-[36px]">
               <h2 className="font-semibold">Fecha: {dateKey}</h2>
             </div>
 
@@ -317,26 +215,16 @@ export default function WorkerBoard() {
                         #{o.id} — {o.empresa} {o.excursion ? `• ${o.excursion}` : ""}
                       </div>
                       <div className="flex items-center gap-2">
-                        {overdue && (
-                          <span className="text-xs px-2 py-1 rounded bg-rose-100 text-rose-700">Atrasado</span>
-                        )}
-                        <span className={`text-xs px-2 py-1 rounded ${badgeCls[o.estado] || "bg-slate-100 text-slate-800"}`}>
-                          {o.estado}
-                        </span>
+                        {overdue && <span className="text-xs px-2 py-1 rounded bg-rose-100 text-rose-700">Atrasado</span>}
+                        <span className={`text-xs px-2 py-1 rounded ${badgeCls[o.estado] || "bg-slate-100 text-slate-800"}`}>{o.estado}</span>
                       </div>
                     </div>
 
                     {!compact && (
                       <div className="text-sm text-slate-600 mt-1 flex flex-wrap gap-x-4 gap-y-1">
-                        <span>
-                          {o.lugar_entrega || "—"} → {o.lugar_recogida || "—"}
-                        </span>
+                        <span>{o.lugar_entrega || "—"} → {o.lugar_recogida || "—"}</span>
                         <span>{o.pax ? `${o.pax} pax` : "—"}</span>
-                        {o.bono && (
-                          <span>
-                            Bono: <code className="px-1 bg-slate-100 rounded">{o.bono}</code>
-                          </span>
-                        )}
+                        {o.bono && <span>Bono: <code className="px-1 bg-slate-100 rounded">{o.bono}</code></span>}
                         {o.guia && <span>Guía: {o.guia}</span>}
                         {o.tipo_servicio && <span>Tipo: {o.tipo_servicio}</span>}
                       </div>
@@ -346,10 +234,7 @@ export default function WorkerBoard() {
                       <button
                         className="px-3 py-1 rounded bg-emerald-600 text-white disabled:opacity-50"
                         disabled={o.estado === "entregado" || deliveredMut.isPending}
-                        onClick={() => {
-                          setSelected(o);
-                          setDeliverOpen(true);
-                        }}
+                        onClick={() => { setSelected(o); setDeliverOpen(true); }}
                       >
                         Marcar entregado
                       </button>
@@ -380,54 +265,21 @@ export default function WorkerBoard() {
         pedido={selected}
         onConfirm={(body) => {
           if (!selected) return;
-          deliveredMut.mutate(
-            { id: selected.id, body },
-            {
-              onSuccess: () => {
-                setDeliverOpen(false);
-                setSelected(null);
-              },
-            }
-          );
+          deliveredMut.mutate({ id: selected.id, body }, {
+            onSuccess: () => { setDeliverOpen(false); setSelected(null); },
+          });
         }}
       />
 
-      {/* ======= SPEED DIAL (botón + con 3 acciones) ======= */}
+      {/* Ícono flotante + acciones (tus 3 botones) */}
       <div className="fixed bottom-6 right-6 z-40">
-        {/* acciones */}
         {speedDialOpen && (
           <div className="mb-3 flex flex-col items-end gap-2">
-            <button
-              onClick={() => {
-                setAddStdOpen(true);
-                setSpeedDialOpen(false);
-              }}
-              className="px-3 py-2 rounded shadow bg-white border text-sm hover:bg-slate-50"
-            >
-              ➕ Pedido estándar
-            </button>
-            <button
-              onClick={() => {
-                setAddCruiseOpen(true);
-                setSpeedDialOpen(false);
-              }}
-              className="px-3 py-2 rounded shadow bg-white border text-sm hover:bg-slate-50"
-            >
-              🚢 Pedido de crucero
-            </button>
-            <button
-              onClick={() => {
-                setReminderOpen(true);
-                setSpeedDialOpen(false);
-              }}
-              className="px-3 py-2 rounded shadow bg-white border text-sm hover:bg-slate-50"
-            >
-              ⏰ Recordatorio
-            </button>
+            <button onClick={() => { setAddStdOpen(true); setSpeedDialOpen(false); }} className="px-3 py-2 rounded shadow bg-white border text-sm hover:bg-slate-50">➕ Pedido estándar</button>
+            <button onClick={() => { setAddCruiseOpen(true); setSpeedDialOpen(false); }} className="px-3 py-2 rounded shadow bg-white border text-sm hover:bg-slate-50">🚢 Pedido de crucero</button>
+            <button onClick={() => { setReminderOpen(true); setSpeedDialOpen(false); }} className="px-3 py-2 rounded shadow bg-white border text-sm hover:bg-slate-50">⏰ Recordatorio</button>
           </div>
         )}
-
-        {/* botón principal */}
         <button
           type="button"
           onClick={() => setSpeedDialOpen((v) => !v)}
@@ -453,7 +305,6 @@ export default function WorkerBoard() {
         onClose={() => setAddCruiseOpen(false)}
         onCreated={() => {
           setAddCruiseOpen(false);
-          // si al crear cruceros también se crean pedidos, refrescamos
           qc.invalidateQueries({ queryKey: ["ops-orders"] });
         }}
       />
