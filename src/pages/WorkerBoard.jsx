@@ -200,8 +200,7 @@ export default function WorkerBoard() {
       <div className="space-y-4">
         {dateKeys.map((dateKey) => (
           <section key={dateKey} className="rounded-xl overflow-hidden border">
-            {/* 👇 ÚNICO CAMBIO IMPORTANTE AQUÍ: top-[36px] */}
-            <div className="bg-sky-600 text-white px-4 py-2 sticky top-[36px]">
+            <div className="bg-sky-600 text-white px-4 py-2 sticky top-[36px] mb-10 z-10 shadow-sm">
               <h2 className="font-semibold">Fecha: {dateKey}</h2>
             </div>
 
