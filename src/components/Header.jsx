@@ -1,14 +1,13 @@
 // src/components/Header.jsx
+import { NavLink, Link } from "react-router-dom";
+import { useQuery } from "@tanstack/react-query";
+import { meApi } from "../services/api";
 import { useState } from "react";
-import { Link, NavLink } from "react-router-dom";
-import { useAuth } from "../hooks/useAuth";
-import { useStaff } from "../hooks/useStaff";
 
-function NavItem({ to, children, onClick }) {
+function NavItem({ to, children }) {
   return (
     <NavLink
       to={to}
-      onClick={onClick}
       className={({ isActive }) =>
         `px-3 py-2 rounded hover:bg-slate-100 ${
           isActive ? "text-[#005dab] font-semibold" : "text-slate-700"
@@ -21,99 +20,98 @@ function NavItem({ to, children, onClick }) {
 }
 
 export default function Header() {
-  const [open, setOpen] = useState(false);
-  const { isAuthenticated, logout } = useAuth();
-  const { isLoading, isStaff, me } = useStaff();
+  const { data: me } = useQuery({
+    queryKey: ["me"],
+    queryFn: async () => (await meApi.getMe()).data,
+    staleTime: 60_000,
+    retry: false,
+  });
 
-  const close = () => setOpen(false);
+  const isAuthed = !!me?.id;
+  const isStaff = !!me?.is_staff;
+  const [open, setOpen] = useState(false);
 
   return (
     <header className="sticky top-0 z-50 bg-white/90 backdrop-blur border-b">
-      <nav className="max-w-6xl mx-auto px-3 sm:px-4">
-        <div className="h-14 flex items-center justify-between gap-2">
-          {/* Brand */}
-          <Link to="/" className="flex items-center gap-2 font-bold text-[#005dab]">
-            <span className="text-xl">Innovations Tours</span>
+      <div className="max-w-6xl mx-auto px-4 h-14 flex items-center justify-between gap-4">
+        {/* Brand */}
+        <div className="flex items-center gap-2">
+          <Link to="/" className="flex items-center gap-2">
+            <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-[#005dab] text-white font-bold">
+              IT
+            </span>
+            <span className="font-semibold text-slate-800">Innovations Tours</span>
           </Link>
-
-          {/* Menú desktop */}
-          <div className="hidden md:flex items-center gap-1">
-            <NavItem to="/">Inicio</NavItem>
-            <NavItem to="/cruceros">Cruceros</NavItem>
-            {/* Solo STAFF → Operaciones */}
-            {!isLoading && isStaff && <NavItem to="/ops">Operaciones</NavItem>}
-          </div>
-
-          {/* Lado derecho (desktop) */}
-          <div className="hidden md:flex items-center gap-3">
-            {isAuthenticated ? (
-              <>
-                <span className="text-sm text-slate-600">
-                  {me?.username || me?.email || "Usuario"}
-                  {(!isLoading && isStaff) && (
-                    <span className="ml-2 text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">
-                      staff
-                    </span>
-                  )}
-                </span>
-                <button
-                  onClick={logout}
-                  className="px-3 py-1.5 rounded border text-sm hover:bg-slate-50"
-                >
-                  Salir
-                </button>
-              </>
-            ) : (
-              <NavItem to="/login">Entrar</NavItem>
-            )}
-          </div>
-
-          {/* Burger móvil */}
-          <button
-            className="md:hidden inline-flex items-center justify-center w-10 h-10 rounded hover:bg-slate-100"
-            onClick={() => setOpen((v) => !v)}
-            aria-label="Abrir menú"
-          >
-            <svg width="22" height="22" viewBox="0 0 24 24" fill="none">
-              <path d="M4 6h16M4 12h16M4 18h16" stroke="#0f172a" strokeWidth="2" strokeLinecap="round" />
-            </svg>
-          </button>
         </div>
 
-        {/* Menú móvil */}
-        {open && (
-          <div className="md:hidden border-t pb-2">
-            <div className="flex flex-col pt-2">
-              <NavItem to="/" onClick={close}>Inicio</NavItem>
-              <NavItem to="/cruceros" onClick={close}>Cruceros</NavItem>
-              {!isLoading && isStaff && <NavItem to="/ops" onClick={close}>Operaciones</NavItem>}
-            </div>
+        {/* Desktop nav */}
+        <nav className="hidden md:flex items-center gap-1">
+          <NavItem to="/ops">Operaciones</NavItem>
+          {isAuthed && <NavItem to="/reminders">Recordatorios</NavItem>}
+        </nav>
 
-            <div className="mt-2 border-t pt-2 flex items-center justify-between">
-              {isAuthenticated ? (
-                <>
-                  <span className="text-sm text-slate-600">
-                    {me?.username || me?.email || "Usuario"}
-                    {(!isLoading && isStaff) && (
-                      <span className="ml-2 text-xs px-2 py-0.5 rounded bg-emerald-100 text-emerald-700">
-                        staff
-                      </span>
-                    )}
-                  </span>
-                  <button
-                    onClick={() => { logout(); close(); }}
-                    className="px-3 py-2 rounded border text-sm"
-                  >
-                    Salir
-                  </button>
-                </>
+        {/* Right side */}
+        <div className="hidden md:flex items-center gap-3">
+          {isAuthed ? (
+            <div className="text-sm text-slate-600">
+              {isStaff && <span className="mr-2 inline-block px-2 py-0.5 text-xs rounded bg-slate-100">Staff</span>}
+              {me.email || me.username}
+            </div>
+          ) : (
+            <NavItem to="/login">Entrar</NavItem>
+          )}
+        </div>
+
+        {/* Mobile menu button */}
+        <button
+          className="md:hidden inline-flex items-center justify-center h-10 w-10 rounded hover:bg-slate-100"
+          aria-label="Abrir menú"
+          onClick={() => setOpen((v) => !v)}
+        >
+          <span className="text-2xl">{open ? "×" : "≡"}</span>
+        </button>
+      </div>
+
+      {/* Mobile drawer */}
+      {open && (
+        <div className="md:hidden border-t bg-white">
+          <div className="max-w-6xl mx-auto px-4 py-3 flex flex-col gap-2">
+            <NavLink
+              to="/ops"
+              className="px-3 py-2 rounded hover:bg-slate-100 text-slate-700"
+              onClick={() => setOpen(false)}
+            >
+              Operaciones
+            </NavLink>
+            {isAuthed && (
+              <NavLink
+                to="/reminders"
+                className="px-3 py-2 rounded hover:bg-slate-100 text-slate-700"
+                onClick={() => setOpen(false)}
+              >
+                Recordatorios
+              </NavLink>
+            )}
+
+            <div className="pt-2 border-t mt-2 text-sm text-slate-600">
+              {isAuthed ? (
+                <div>
+                  {isStaff && <span className="mr-2 inline-block px-2 py-0.5 text-xs rounded bg-slate-100">Staff</span>}
+                  {me.email || me.username}
+                </div>
               ) : (
-                <NavItem to="/login" onClick={close}>Entrar</NavItem>
+                <NavLink
+                  to="/login"
+                  className="px-3 py-2 rounded hover:bg-slate-100 text-slate-700 inline-block"
+                  onClick={() => setOpen(false)}
+                >
+                  Entrar
+                </NavLink>
               )}
             </div>
           </div>
-        )}
-      </nav>
+        </div>
+      )}
     </header>
   );
 }
