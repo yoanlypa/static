@@ -143,7 +143,7 @@ export default function Reminders() {
       <div className="space-y-4">
         {days.map((d)=>(
           <section key={d} className="rounded-xl overflow-hidden border">
-            <div className="bg-sky-600 text-white px-4 py-2 sticky top-[56px]">
+            <div className="bg-sky-600 text-white px-4 py-2 sticky top-[16px]">
               <h2 className="font-semibold">Fecha: {d}</h2>
             </div>
             <div className="p-3 grid gap-2">
