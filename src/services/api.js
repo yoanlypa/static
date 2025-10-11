@@ -144,7 +144,7 @@ export const opsApi = {
 };
 export const remindersApi = {
   list: (params) => api.get("reminders/", { params }),
-  create: (payload) => api.post("reminders/", payload),
+  create: ({ title, when, notes }) => api.post("reminders/", {title, due_at: when, notes,}),  
   update: (id, payload) => api.patch(`reminders/${id}/`, payload),
   remove: (id) => api.delete(`reminders/${id}/`),
 };

@@ -63,7 +63,7 @@ export default function Reminders() {
     const arr = (listQ.data || []).slice().sort((a,b) => String(a.when).localeCompare(String(b.when)));
     const byDay = {};
     for (const r of arr) {
-      const k = (r.when || "").slice(0,10) || "—";
+      const k = (r.due_at || "").slice(0,10) || "—";
       (byDay[k] ??= []).push(r);
     }
     return byDay;
@@ -159,7 +159,7 @@ export default function Reminders() {
                     <div>
                       <div className={`font-semibold ${r.done ? "line-through text-slate-400" : ""}`}>{r.title}</div>
                       <div className="text-sm text-slate-600">
-                        {new Date(r.when).toLocaleString()}
+                        {new Date(r.due_at).toLocaleString()}
                       </div>
                       {r.notes && <div className="text-sm text-slate-700 mt-1">{r.notes}</div>}
                     </div>

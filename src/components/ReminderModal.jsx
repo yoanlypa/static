@@ -28,7 +28,7 @@ export default function ReminderModal({ open, onClose, onCreate }) {
 
   const createMut = useMutation({
     mutationFn: async () => {
-      return remindersApi.create({ title: title.trim(), when: whenISO, notes: notes.trim() });
+      return remindersApi.create({ title: title.trim(), due_at: whenISO, notes: notes.trim() });
     },
     onSuccess: () => {
       setBanner({ kind: "ok", msg: "Recordatorio creado" });
