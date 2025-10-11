@@ -55,7 +55,7 @@ api.interceptors.request.use((config) => {
   if (["post", "put", "patch"].includes(method) && config.data && typeof config.data === "object") {
     const d = config.data;
 
-    // Fechas: enviar solo YYYY-MM-DD
+    // Fechas: enviar solo YYYY-MM-DD para endpoints de pedidos
     if (d.fecha_inicio) d.fecha_inicio = stripToDate(d.fecha_inicio);
     if (d.fecha_fin) d.fecha_fin = stripToDate(d.fecha_fin);
 
@@ -69,7 +69,7 @@ api.interceptors.request.use((config) => {
     // nunca enviar el campo UI
     if ("hora_mediodia" in d) delete d.hora_mediodia;
 
-    // emisores numérico u omitir
+    // Casts numéricos
     coerceIntOrDelete(d, "empresa");
     coerceIntOrDelete(d, "emisores");
   }
@@ -142,9 +142,18 @@ export const opsApi = {
   createOrder: (payload) => api.post("ops/pedidos/", payload),
   postCruiseBulk: (rows) => api.post("pedidos/cruceros/bulk/", rows),
 };
+
 export const remindersApi = {
   list: (params) => api.get("reminders/", { params }),
-  create: ({ title, when, notes }) => api.post("reminders/", {title, due_at: when, notes,}),  
+  // ⬇️ acepta { title, when, due_at, notes } y siempre envía due_at
+  create: (payload = {}) => {
+    const { title, when, due_at, notes } = payload;
+    return api.post("reminders/", {
+      title: (title ?? "").trim(),
+      due_at: (due_at ?? when) || null,
+      notes: (notes ?? "").trim(),
+    });
+  },
   update: (id, payload) => api.patch(`reminders/${id}/`, payload),
   remove: (id) => api.delete(`reminders/${id}/`),
 };
@@ -155,5 +164,6 @@ export const meApi = {
 export const companiesApi = {
   list: () => api.get("empresas/"),
 };
+
 export default api;
 export { API_ROOT };
