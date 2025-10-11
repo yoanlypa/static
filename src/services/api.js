@@ -1,16 +1,15 @@
 // src/services/api.js
 import axios from "axios";
 
-// Soporta VITE_API_URL (principal) o VITE_API_ROOT (fallback)
 const ENV_API = import.meta.env.VITE_API_URL || import.meta.env.VITE_API_ROOT || "";
-const API_ROOT = ENV_API.replace(/\/$/, ""); // sin barra final
+const API_ROOT = ENV_API.replace(/\/$/, "");
 
 const api = axios.create({
   baseURL: `${API_ROOT}/api`,
   withCredentials: true,
 });
 
-// ---------- Helpers de normalización ----------
+// ----- Helpers usados por pedidos (no tocan reminders) -----
 function stripToDate(v) {
   if (typeof v !== "string") return v;
   const s = v.trim();
@@ -18,7 +17,6 @@ function stripToDate(v) {
   if (s.includes(" ")) return s.split(" ", 1)[0];
   return s;
 }
-
 function coerceIntOrDelete(obj, key) {
   if (!(key in obj)) return;
   const raw = obj[key];
@@ -27,15 +25,10 @@ function coerceIntOrDelete(obj, key) {
     return;
   }
   const n = Number(raw);
-  if (Number.isNaN(n)) {
-    delete obj[key];
-  } else {
-    obj[key] = n;
-  }
+  if (Number.isNaN(n)) delete obj[key];
+  else obj[key] = n;
 }
-
 function injectHoraIntoNotas(notas, hora) {
-  // elimina tags previos y añade uno nuevo limpio
   const clean = String(notas || "")
     .replace(/(^|\n)HORA_INICIO:\s*\d{1,2}:\d{2}\s*/gi, "")
     .trim();
@@ -43,33 +36,33 @@ function injectHoraIntoNotas(notas, hora) {
   return [clean, tag].filter(Boolean).join("\n");
 }
 
-// ---------- Autorización ----------
+// ----- Auth + normalización SOLO para pedidos -----
 api.interceptors.request.use((config) => {
   const access = localStorage.getItem("access");
-  if (access) {
-    config.headers.Authorization = `Bearer ${access}`;
-  }
+  if (access) config.headers.Authorization = `Bearer ${access}`;
 
-  // Normalización previa a enviar datos
   const method = (config.method || "get").toLowerCase();
-  if (["post", "put", "patch"].includes(method) && config.data && typeof config.data === "object") {
+  const url = (config.url || "").replace(/^\/+/, ""); // sin barra inicial
+
+  // Normaliza SOLO payloads de pedidos (ops/pedidos, etc.). NO tocar reminders.
+  if (
+    ["post", "put", "patch"].includes(method) &&
+    config.data &&
+    typeof config.data === "object" &&
+    url.startsWith("ops/pedidos")
+  ) {
     const d = config.data;
 
-    // Fechas: enviar solo YYYY-MM-DD para endpoints de pedidos
     if (d.fecha_inicio) d.fecha_inicio = stripToDate(d.fecha_inicio);
     if (d.fecha_fin) d.fecha_fin = stripToDate(d.fecha_fin);
 
-    // Tipo de servicio: mapear dia_completo -> dia_Completo (modelo)
     if (d.tipo_servicio === "dia_completo") d.tipo_servicio = "dia_Completo";
 
-    // Mediodía: si viene hora_mediodia, guardarla "aparte" dentro de notas con tag
     if (d.tipo_servicio === "mediodia" && typeof d.hora_mediodia === "string" && d.hora_mediodia.trim()) {
       d.notas = injectHoraIntoNotas(d.notas, d.hora_mediodia.trim());
     }
-    // nunca enviar el campo UI
     if ("hora_mediodia" in d) delete d.hora_mediodia;
 
-    // Casts numéricos
     coerceIntOrDelete(d, "empresa");
     coerceIntOrDelete(d, "emisores");
   }
@@ -77,30 +70,21 @@ api.interceptors.request.use((config) => {
   return config;
 });
 
-// ---------- Refresh de token 401 ----------
+// ----- Refresh 401 -----
 let isRefreshing = false;
 let refreshSubscribers = [];
-
-function onRefreshed(token) {
-  refreshSubscribers.forEach((cb) => cb(token));
-  refreshSubscribers = [];
-}
-function addRefreshSubscriber(cb) {
-  refreshSubscribers.push(cb);
-}
+function onRefreshed(token) { refreshSubscribers.forEach((cb) => cb(token)); refreshSubscribers = []; }
+function addRefreshSubscriber(cb) { refreshSubscribers.push(cb); }
 
 api.interceptors.response.use(
   (res) => res,
   async (error) => {
     const { response, config: originalRequest } = error;
     if (!response) return Promise.reject(error);
-
     const is401 = response.status === 401;
     const isRefreshCall = originalRequest?.url?.includes("token/refresh/");
-
     if (is401 && !isRefreshCall) {
       if (isRefreshing) {
-        // Espera a que termine el refresh actual
         return new Promise((resolve) => {
           addRefreshSubscriber((newToken) => {
             originalRequest.headers.Authorization = `Bearer ${newToken}`;
@@ -108,33 +92,29 @@ api.interceptors.response.use(
           });
         });
       }
-
       isRefreshing = true;
       try {
         const refresh = localStorage.getItem("refresh");
         if (!refresh) throw new Error("No refresh token");
         const { data } = await api.post("token/refresh/", { refresh });
-
         localStorage.setItem("access", data.access);
         onRefreshed(data.access);
-
         originalRequest.headers.Authorization = `Bearer ${data.access}`;
         return api(originalRequest);
-      } catch (refreshErr) {
+      } catch (err) {
         localStorage.removeItem("access");
         localStorage.removeItem("refresh");
         window.location.href = "/login";
-        return Promise.reject(refreshErr);
+        return Promise.reject(err);
       } finally {
         isRefreshing = false;
       }
     }
-
     return Promise.reject(error);
   }
 );
 
-// ---------- Endpoints ----------
+// ----- Endpoints -----
 export const opsApi = {
   listOpsOrders: (params) => api.get("ops/pedidos/", { params }),
   markDelivered: (id, payload) => api.post(`ops/pedidos/${id}/delivered/`, payload),
@@ -145,25 +125,14 @@ export const opsApi = {
 
 export const remindersApi = {
   list: (params) => api.get("reminders/", { params }),
-  // ⬇️ acepta { title, when, due_at, notes } y siempre envía due_at
-  create: (payload = {}) => {
-    const { title, when, due_at, notes } = payload;
-    return api.post("reminders/", {
-      title: (title ?? "").trim(),
-      due_at: (due_at ?? when) || null,
-      notes: (notes ?? "").trim(),
-    });
-  },
+  // 👇 manda EXACTAMENTE lo que recibe (incluido due_at)
+  create: (payload) => api.post("reminders/", payload),
   update: (id, payload) => api.patch(`reminders/${id}/`, payload),
   remove: (id) => api.delete(`reminders/${id}/`),
 };
 
-export const meApi = {
-  getMe: () => api.get("me/"),
-};
-export const companiesApi = {
-  list: () => api.get("empresas/"),
-};
+export const meApi = { getMe: () => api.get("me/") };
+export const companiesApi = { list: () => api.get("empresas/") };
 
 export default api;
 export { API_ROOT };
