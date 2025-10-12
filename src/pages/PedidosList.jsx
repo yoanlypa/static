@@ -10,11 +10,13 @@ function normalizePedidos(raw) {
   return [];
 }
 
-function fmtDate(d) {
+function toDayMonth(d) {
   if (!d) return "—";
-  // admite "YYYY-MM-DD" o "YYYY-MM-DDTHH:MM:SSZ"
   const s = String(d);
-  return s.includes("T") ? s.slice(0, 10) : s;
+  const base = s.includes("T") ? s.slice(0, 10) : s; // YYYY-MM-DD
+  const [yyyy, mm, dd] = base.split("-");
+  if (!yyyy || !mm || !dd) return base || "—";
+  return `${dd}/${mm}`; // DD/MM
 }
 
 function fmtDateTime(d) {
@@ -31,9 +33,55 @@ const estadoBadge = {
   recogido: "bg-slate-200 text-slate-800",
 };
 
+function NotesModal({ open, onClose, title = "Notas", notes = "" }) {
+  if (!open) return null;
+  return (
+    <div
+      className="fixed inset-0 z-50 bg-black/40 flex items-end sm:items-center justify-center p-0 sm:p-4"
+      role="dialog"
+      aria-modal="true"
+    >
+      <div className="w-full h-[60dvh] sm:h-auto sm:max-h-[70vh] sm:max-w-lg bg-white rounded-t-2xl sm:rounded-xl shadow-lg flex flex-col">
+        <div className="px-4 py-3 border-b bg-white sticky top-0 z-10 flex items-center justify-between">
+          <h3 className="text-lg font-semibold">{title}</h3>
+          <button
+            className="text-slate-500 hover:text-slate-800 text-xl leading-none"
+            onClick={onClose}
+            aria-label="Cerrar"
+          >
+            ✕
+          </button>
+        </div>
+
+        <div className="flex-1 overflow-y-auto px-4 py-4">
+          <pre className="whitespace-pre-wrap text-sm p-3 bg-slate-50 rounded border">
+            {notes || "—"}
+          </pre>
+        </div>
+
+        <div className="px-4 py-3 border-t bg-white sticky bottom-0 z-10">
+          <div className="flex justify-end">
+            <button
+              type="button"
+              className="px-4 py-2 rounded border text-sm"
+              onClick={onClose}
+            >
+              Cerrar
+            </button>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
 export default function PedidosList() {
   const [modalOpen, setModalOpen] = useState(false);
   const buttonRef = useRef(null);
+
+  const [notesOpen, setNotesOpen] = useState(false);
+  const [notesContent, setNotesContent] = useState("");
+  const [notesTitle, setNotesTitle] = useState("Notas");
 
   const { data, isLoading, isError, refetch } = useQuery({
     queryKey: ["mis-pedidos"],
@@ -43,7 +91,7 @@ export default function PedidosList() {
 
   const pedidos = useMemo(() => {
     const arr = normalizePedidos(data);
-    // seguridad extra: no mostrar cruceros en "mis pedidos" (sólo estándar)
+    // no mostrar cruceros en "mis pedidos" (sólo estándar)
     return arr.filter((p) => (p?.tipo_servicio || "") !== "crucero");
   }, [data]);
 
@@ -55,6 +103,12 @@ export default function PedidosList() {
 
   if (isLoading) return <p className="text-center mt-8">Cargando pedidos...</p>;
   if (isError) return <p className="text-center mt-8 text-red-600">Error al cargar pedidos</p>;
+
+  function openNotes(notes, headerText) {
+    setNotesContent(notes || "");
+    setNotesTitle(headerText || "Notas");
+    setNotesOpen(true);
+  }
 
   return (
     <div className="p-6 relative max-w-6xl mx-auto">
@@ -69,34 +123,43 @@ export default function PedidosList() {
             <table className="min-w-full bg-white rounded-xl shadow overflow-hidden">
               <thead className="bg-gray-100">
                 <tr>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">ID</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Empresa</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Excursión</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Tipo</th>
-                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Fechas</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Inicio</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Fin</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">PAX</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Bono</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Guía</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Entrega → Recogida</th>
+                  <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Notas</th>
                   <th className="px-4 py-2 text-left text-sm font-semibold text-gray-600">Estado</th>
                 </tr>
               </thead>
               <tbody>
                 {pedidos.map((p) => (
-                  <tr key={p.id} className="border-t last:border-b-0 hover:bg-blue-50 transition">
-                    <td className="px-4 py-2 text-sm">{p.id}</td>
-                    {/* empresa_nombre si existe (lo añadimos en el serializer), si no, el ID */}
+                  <tr key={`row-${p.id}`} className="border-t last:border-b-0 hover:bg-blue-50 transition">
                     <td className="px-4 py-2 text-sm">{p.empresa_nombre || p.empresa || "—"}</td>
                     <td className="px-4 py-2 text-sm">{p.excursion || "—"}</td>
                     <td className="px-4 py-2 text-sm">{p.tipo_servicio || "—"}</td>
-                    <td className="px-4 py-2 text-sm">
-                      {fmtDate(p.fecha_inicio)} — {fmtDate(p.fecha_fin)}
-                    </td>
+                    <td className="px-4 py-2 text-sm">{toDayMonth(p.fecha_inicio)}</td>
+                    <td className="px-4 py-2 text-sm">{toDayMonth(p.fecha_fin)}</td>
                     <td className="px-4 py-2 text-sm">{p.pax ?? "—"}</td>
                     <td className="px-4 py-2 text-sm">{p.bono || "—"}</td>
                     <td className="px-4 py-2 text-sm">{p.guia || "—"}</td>
                     <td className="px-4 py-2 text-sm">
                       {(p.lugar_entrega || "—") + " → " + (p.lugar_recogida || "—")}
+                    </td>
+                    <td className="px-4 py-2 text-sm">
+                      <button
+                        title="Ver notas"
+                        className="inline-flex items-center gap-1 px-2 py-1 rounded border hover:bg-slate-50"
+                        onClick={() =>
+                          openNotes(p.notas, `${p.empresa_nombre || p.empresa || ""}${p.excursion ? ` · ${p.excursion}` : ""}`)
+                        }
+                      >
+                        📝 <span className="text-xs text-slate-600">ver</span>
+                      </button>
                     </td>
                     <td className="px-4 py-2 text-sm">
                       <span
@@ -113,17 +176,13 @@ export default function PedidosList() {
               </tbody>
             </table>
 
-            {/* Bloque de notas y auditoría debajo (tabla no es ideal para texto largo) */}
+            {/* Auditoría opcional (fechas) */}
             <div className="mt-4 grid grid-cols-1 gap-3">
               {pedidos.map((p) => (
-                <div key={`notes-${p.id}`} className="bg-white border rounded-xl p-3">
-                  <div className="text-sm text-slate-500 mb-1">Pedido #{p.id} — Notas</div>
-                  <pre className="whitespace-pre-wrap text-sm p-2 bg-slate-50 rounded border">
-                    {p.notas || "—"}
-                  </pre>
-                  <div className="grid md:grid-cols-2 gap-2 text-xs text-slate-500 mt-2">
-                    <div>Creado: {fmtDateTime(p.fecha_creacion)}</div>
-                    <div>Modificado: {fmtDateTime(p.fecha_modificacion)}</div>
+                <div key={`audit-${p.id}`} className="bg-white border rounded-xl p-3">
+                  <div className="grid md:grid-cols-2 gap-2 text-xs text-slate-500">
+                    <div><span className="text-slate-400">Creado:</span> {fmtDateTime(p.fecha_creacion)}</div>
+                    <div><span className="text-slate-400">Modificado:</span> {fmtDateTime(p.fecha_modificacion)}</div>
                   </div>
                 </div>
               ))}
@@ -133,10 +192,10 @@ export default function PedidosList() {
           {/* Tarjetas (móvil < md) */}
           <div className="md:hidden grid gap-3">
             {pedidos.map((p) => (
-              <div key={p.id} className="border rounded-lg p-3 bg-white">
+              <div key={`card-${p.id}`} className="border rounded-lg p-3 bg-white">
                 <div className="flex items-center justify-between gap-2">
                   <div className="font-semibold">
-                    #{p.id} · {p.empresa_nombre || p.empresa || "—"}
+                    {p.empresa_nombre || p.empresa || "—"}
                     {p.excursion ? ` • ${p.excursion}` : ""}
                   </div>
                   <span
@@ -152,8 +211,8 @@ export default function PedidosList() {
                 <div className="text-sm text-slate-700 mt-2 space-y-1">
                   <div><span className="text-slate-500">Tipo: </span>{p.tipo_servicio || "—"}</div>
                   <div>
-                    <span className="text-slate-500">Fechas: </span>
-                    {fmtDate(p.fecha_inicio)} — {fmtDate(p.fecha_fin)}
+                    <span className="text-slate-500">Inicio / Fin: </span>
+                    {toDayMonth(p.fecha_inicio)} — {toDayMonth(p.fecha_fin)}
                   </div>
                   <div><span className="text-slate-500">PAX: </span>{p.pax ?? "—"}</div>
                   <div><span className="text-slate-500">Bono: </span>{p.bono || "—"}</div>
@@ -164,18 +223,21 @@ export default function PedidosList() {
                   </div>
                 </div>
 
-                {p.notas ? (
-                  <div className="mt-2">
-                    <div className="text-slate-500 text-xs mb-1">Notas</div>
-                    <pre className="whitespace-pre-wrap text-sm p-2 bg-slate-50 rounded border">
-                      {p.notas}
-                    </pre>
-                  </div>
-                ) : null}
+                <div className="mt-3 flex justify-end">
+                  <button
+                    title="Ver notas"
+                    className="inline-flex items-center gap-1 px-3 py-1.5 rounded border text-sm hover:bg-slate-50"
+                    onClick={() =>
+                      openNotes(p.notas, `${p.empresa_nombre || p.empresa || ""}${p.excursion ? ` · ${p.excursion}` : ""}`)
+                    }
+                  >
+                    📝 Ver notas
+                  </button>
+                </div>
 
                 <div className="grid grid-cols-2 gap-2 text-xs text-slate-500 mt-2">
-                  <div>Creado: {fmtDateTime(p.fecha_creacion)}</div>
-                  <div>Modificado: {fmtDateTime(p.fecha_modificacion)}</div>
+                  <div><span className="text-slate-400">Creado:</span> {fmtDateTime(p.fecha_creacion)}</div>
+                  <div><span className="text-slate-400">Modificado:</span> {fmtDateTime(p.fecha_modificacion)}</div>
                 </div>
               </div>
             ))}
@@ -195,6 +257,9 @@ export default function PedidosList() {
       </button>
 
       <PedidoFormModal isOpen={modalOpen} onClose={handleCloseModal} />
+
+      {/* Mini-modal de notas */}
+      <NotesModal open={notesOpen} onClose={() => setNotesOpen(false)} title={notesTitle} notes={notesContent} />
     </div>
   );
 }
