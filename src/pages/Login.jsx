@@ -17,15 +17,17 @@ export default function Login() {
   const navigate = useNavigate();
   const [formError, setFormError] = useState('');
 
-const onSubmit = async (data) => {
-  setFormError('');
-  try {
-    await login(data.email, data.password);
-    navigate('/mis-pedidos');
-  } catch (err) {
-    setFormError(err.message || 'Credenciales inválidas.');
-  }
-};
+  const onSubmit = async (data) => {
+    setFormError('');
+    try {
+      await login(data.email, data.password);
+      // después de login(), ya invalidamos ["me"]
+      // así que Header va a rerenderizarse bien SIN refrescar
+      navigate('/mis-pedidos');
+    } catch (err) {
+      setFormError(err.message || 'Credenciales inválidas.');
+    }
+  };
 
   if (isAuthenticated) {
     return <Navigate to="/mis-pedidos" replace />;
@@ -38,19 +40,31 @@ const onSubmit = async (data) => {
         className="bg-white p-8 rounded-2xl shadow-md w-full max-w-sm space-y-4"
       >
         <h1 className="text-2xl font-bold text-center">Iniciar sesión</h1>
+
         {formError && (
           <div className="text-red-500 text-center mb-2">{formError}</div>
         )}
+
         <div>
           <label className="block font-medium mb-1">Email</label>
-          <input type="email" {...register('email')} className="w-full border rounded p-2" />
+          <input
+            type="email"
+            {...register('email')}
+            className="w-full border rounded p-2"
+          />
           <p className="text-red-500 text-sm">{errors.email?.message}</p>
         </div>
+
         <div>
           <label className="block font-medium mb-1">Contraseña</label>
-          <input type="password" {...register('password')} className="w-full border rounded p-2" />
+          <input
+            type="password"
+            {...register('password')}
+            className="w-full border rounded p-2"
+          />
           <p className="text-red-500 text-sm">{errors.password?.message}</p>
         </div>
+
         <button
           type="submit"
           className="w-full bg-blue-600 text-white py-2 rounded-xl shadow hover:bg-blue-700 transition"
