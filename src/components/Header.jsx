@@ -40,21 +40,32 @@ export default function Header() {
             <span className="inline-flex h-8 w-8 items-center justify-center rounded bg-[#005dab] text-white font-bold">
               IT
             </span>
-            <span className="font-semibold text-slate-800">Innovations Tours</span>
+            <span className="font-semibold text-slate-800">
+              Innovations Tours
+            </span>
           </Link>
         </div>
 
         {/* Desktop nav */}
         <nav className="hidden md:flex items-center gap-1">
           <NavItem to="/ops">Operaciones</NavItem>
-          {isAuthed && <NavItem to="/reminders">Recordatorios</NavItem>}
+          {isAuthed && (
+            <>
+              <NavItem to="/cruceros">Cruceros</NavItem>
+              <NavItem to="/reminders">Recordatorios</NavItem>
+            </>
+          )}
         </nav>
 
         {/* Right side */}
         <div className="hidden md:flex items-center gap-3">
           {isAuthed ? (
             <div className="text-sm text-slate-600">
-              {isStaff && <span className="mr-2 inline-block px-2 py-0.5 text-xs rounded bg-slate-100">Staff</span>}
+              {isStaff && (
+                <span className="mr-2 inline-block px-2 py-0.5 text-xs rounded bg-slate-100">
+                  Staff
+                </span>
+              )}
               {me.email || me.username}
             </div>
           ) : (
@@ -83,20 +94,34 @@ export default function Header() {
             >
               Operaciones
             </NavLink>
+
             {isAuthed && (
-              <NavLink
-                to="/reminders"
-                className="px-3 py-2 rounded hover:bg-slate-100 text-slate-700"
-                onClick={() => setOpen(false)}
-              >
-                Recordatorios
-              </NavLink>
+              <>
+                <NavLink
+                  to="/cruceros"
+                  className="px-3 py-2 rounded hover:bg-slate-100 text-slate-700"
+                  onClick={() => setOpen(false)}
+                >
+                  Cruceros
+                </NavLink>
+                <NavLink
+                  to="/reminders"
+                  className="px-3 py-2 rounded hover:bg-slate-100 text-slate-700"
+                  onClick={() => setOpen(false)}
+                >
+                  Recordatorios
+                </NavLink>
+              </>
             )}
 
             <div className="pt-2 border-t mt-2 text-sm text-slate-600">
               {isAuthed ? (
                 <div>
-                  {isStaff && <span className="mr-2 inline-block px-2 py-0.5 text-xs rounded bg-slate-100">Staff</span>}
+                  {isStaff && (
+                    <span className="mr-2 inline-block px-2 py-0.5 text-xs rounded bg-slate-100">
+                      Staff
+                    </span>
+                  )}
                   {me.email || me.username}
                 </div>
               ) : (
